@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Request Dashboard Agent</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<style>
+  /* Light theme on the workshop palette: navy text on white, brand blue
+     for the user, teal for the agent. */
+  :root {
+    --bg: #ffffff;
+    --bg-nav: #ffffff;
+    --surface: #f4f8fb;
+    --input-bg: #ffffff;
+    --text: #071945;
+    --text-muted: #3c4a6b;
+    --text-dim: #67718c;
+    --text-faint: #8b93a8;
+    --border: #ccd9f2;
+    --border-subtle: rgba(20, 52, 203, 0.10);
+    --border-card: #9db4ec;
+    --you: #1434cb;
+    --you-bg: rgba(20, 52, 203, 0.05);
+    --agent: #0c8a70;
+    --agent-bg: rgba(32, 202, 166, 0.08);
+    --ok: #0c8a70;
+    --warn: #9a6700;
+    --prio-high: #e02d2d;
+    --prio-low: #4d9fdb;
+    --radius: 2px;
+    --mono: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+    --ease: cubic-bezier(0.25, 1, 0.5, 1);
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    --bg: #06080f;
+    --bg-nav: #02090f;
+    --surface: #0d0e13;
+    --input-bg: #080b16;
+    --text: #edeef0;
+    --text-muted: #b0b4ba;
+    --text-dim: #777b84;
+    --text-faint: #5a6169;
+    --border: #212225;
+    --border-subtle: rgba(255, 255, 255, 0.04);
+    --border-card: #363a3f;
+    --you: rgba(124, 211, 255, 0.94);
+    --you-bg: rgba(17, 132, 252, 0.06);
+    --agent: #ffa057;
+    --agent-bg: rgba(245, 166, 35, 0.06);
+    --ok: #85d4a1;
+    --warn: #ffa057;
+    --prio-high: #ff6369;
+    --prio-low: #7cd3ff;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.55 system-ui, sans-serif;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-nav);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand span { font-size: 15px; font-weight: 500; }
+  #identity { display: flex; align-items: center; gap: 10px; }
+  .signin {
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 7px 16px;
+    border-radius: var(--radius);
+    background: #1434cb;
+    transition: background-color 0.15s var(--ease);
+  }
+  .signin:hover { background: #061f82; }
+  .email { font-size: 12px; color: var(--text-muted); }
+  .signout {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .tag {
+    font-size: 11px;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 3px 8px;
+  }
+  #workspace { flex: 1; display: flex; min-height: 0; }
+  #panel {
+    width: 63%;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-right: 1px solid var(--border);
+  }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 9px 20px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .panel-head h2 { font-size: 13px; font-weight: 500; }
+  #panel-tools { display: flex; align-items: center; gap: 14px; }
+  #summary { display: flex; gap: 14px; font-family: var(--mono); font-size: 12px; }
+  #summary .ok { color: var(--ok); }
+  #summary .warn { color: var(--warn); }
+  #summary .dim { color: var(--text-dim); }
+  .panel-body { flex: 1; overflow-y: auto; padding: 8px 20px 20px; }
+  .empty {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-faint);
+    animation: fade-rise 0.3s var(--ease);
+  }
+  .gate {
+    width: 100%;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    animation: fade-rise 0.3s var(--ease);
+  }
+  .gate-card { text-align: center; max-width: 400px; }
+  .gate-card h2 { font-size: 17px; font-weight: 500; margin: 0 0 8px; }
+  .gate-card p { color: var(--text-muted); font-size: 13.5px; margin: 0 0 20px; }
+  .gate-card .signin { display: inline-block; }
+  .panel-error {
+    margin: 12px 0;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warn);
+    border-radius: var(--radius);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-muted);
+    animation: fade-rise 0.3s var(--ease);
+  }
+  .panel-error a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    overflow-wrap: anywhere;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  tbody tr { animation: fade-rise 0.22s var(--ease) backwards; }
+  tbody tr:hover td { background: var(--you-bg); }
+  th {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-dim);
+    text-transform: capitalize;
+    text-align: left;
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    font-size: 14px;
+    color: var(--text-muted);
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background-color 0.12s var(--ease);
+    /* Titles are attendee-written; break even an unbroken wall of text
+       rather than let one hostile title shove the other columns aside. */
+    overflow-wrap: anywhere;
+  }
+  td.key { font-family: var(--mono); font-size: 13px; color: var(--text-dim); white-space: nowrap; }
+  td.person { min-width: 150px; }
+  .badge {
+    font-family: var(--mono);
+    font-size: 12px;
+    white-space: nowrap;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2px 8px;
+  }
+  .badge.ok { color: var(--ok); }
+  .badge.warn { color: var(--warn); }
+  .badge.dim { color: var(--text-dim); }
+  /* Priority mark before a title; shape and color differ per level, and the
+     tooltip names it, so color alone never carries the meaning. */
+  .prio { margin-right: 5px; }
+  .prio svg { vertical-align: -2px; }
+  .prio.high { color: var(--prio-high); }
+  .prio.low { color: var(--prio-low); }
+  #chatpane { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  main { flex: 1; overflow-y: auto; padding: 20px; }
+  .msg { max-width: 85%; margin-bottom: 18px; animation: fade-rise 0.25s var(--ease); }
+  .msg.you { max-width: 75%; margin-left: auto; }
+  .label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--agent);
+    margin-bottom: 5px;
+  }
+  .msg.you .label { color: var(--you); text-align: right; }
+  .card {
+    background: var(--agent-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    color: var(--text-muted);
+    overflow-wrap: break-word;
+  }
+  .msg.you .card { background: var(--you-bg); color: var(--text); white-space: pre-wrap; }
+  .card p, .card ul, .card ol, .card pre, .card h4 { margin: 0 0 8px; }
+  .card :last-child { margin-bottom: 0; }
+  .card ul, .card ol { padding-left: 22px; }
+  .card li { margin-bottom: 3px; }
+  .card h4 { color: var(--text); font-size: 13px; }
+  .card code {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    background: var(--you-bg);
+    border-radius: var(--radius);
+    padding: 1px 5px;
+  }
+  .card pre {
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    overflow-x: auto;
+  }
+  .card pre code { background: none; padding: 0; }
+  .card a { color: var(--you); }
+  .waiting {
+    /* Flex centers the icon, label, and cursor on one axis; baselines and
+       glyph metrics stop mattering. */
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-faint);
+    margin: 16px 2px;
+    animation: fade-rise 0.2s var(--ease);
+  }
+  .cursor {
+    /* A drawn box, not the █ glyph, so it can't sit off the text's center. */
+    width: 7px;
+    height: 13px;
+    background: var(--text-dim);
+    animation: blink 1.06s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  @keyframes fade-rise { from { opacity: 0; transform: translateY(4px); } }
+  @keyframes icon-swap { from { opacity: 0; transform: rotate(-40deg); } }
+  /* Crossfade colors only while the theme toggle flips them. */
+  .theming, .theming * {
+    transition: background-color 0.3s var(--ease), color 0.3s var(--ease),
+      border-color 0.3s var(--ease) !important;
+  }
+  form {
+    display: flex;
+    gap: 10px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding: 12px 20px;
+  }
+  input {
+    flex: 1;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 9px 14px;
+    font: inherit;
+    color: var(--text);
+    transition: border-color 0.15s var(--ease);
+  }
+  input::placeholder { color: var(--text-faint); }
+  input:focus { outline: none; border-color: var(--you); }
+  button {
+    font: inherit;
+    font-weight: 500;
+    color: var(--you);
+    background: none;
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius);
+    padding: 9px 18px;
+    cursor: pointer;
+    transition: color 0.15s var(--ease), border-color 0.15s var(--ease),
+      background-color 0.15s var(--ease), transform 0.1s var(--ease);
+  }
+  button:not(:disabled):hover { border-color: var(--you); background: var(--you-bg); }
+  button:not(:disabled):active { transform: translateY(1px); }
+  button:disabled { color: var(--text-faint); cursor: default; }
+  #theme, #reset, #refresh {
+    display: flex;
+    align-items: center;
+    color: var(--text-dim);
+    padding: 5px;
+  }
+  #theme:hover, #reset:hover, #refresh:hover { color: var(--text); }
+  #theme svg { animation: icon-swap 0.25s var(--ease); }
+  #controls { display: flex; align-items: center; gap: 14px; }
+  @media (max-width: 880px) {
+    #workspace { flex-direction: column; }
+    #panel {
+      width: 100%;
+      max-height: 44%;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-delay: 0s !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg width="30" height="26" viewBox="24 24 119 103" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Keycard"><path d="M138.573 97.5606L116.669 77.581C115.196 76.2129 115.152 73.8954 116.574 72.4735L116.588 72.4597L138.573 52.753V58.3249L119.893 74.9816L138.573 91.9671V97.5606Z" fill="currentColor"/><path d="M99.0481 77.581L138.573 114.27V108.677L102.272 74.9816L138.573 41.4994V35.9265L98.9676 72.4597L98.9529 72.4735C97.5313 73.8954 97.575 76.2129 99.0481 77.581Z" fill="currentColor"/><path d="M136.334 27.5L85.0134 75.1367L136.573 122.995H130.547L130.403 122.861L81.1987 77.1874H28.1404V73.088L81.1978 73.087L130.166 27.6345L130.31 27.5H136.334Z" fill="currentColor"/><path d="M78.8526 85.9329C78.1961 85.3229 77.332 84.9848 76.4367 84.9846H28V89.084H76.2198L112.565 122.861L112.71 122.995H118.731L78.8526 85.9329Z" fill="currentColor"/><path d="M71.2497 96.6094C72.1466 96.6095 73.011 96.9492 73.6675 97.5606L100.974 122.995H94.9596L71.0327 100.709H32.0994V122.995H28V100.157C28.0002 98.1979 29.5884 96.6094 31.5477 96.6094H71.2497Z" fill="currentColor"/><path d="M40.0626 122.995H44.1619V107.854H40.0626V122.995ZM52.2036 122.995H56.303V107.854H52.2036V122.995ZM68.4441 122.995H64.3447V107.854H68.4441V122.995Z" fill="currentColor"/><path d="M71.0327 49.6049H32.0994V27.5H28V50.1566L28.0049 50.3391C28.1002 52.2134 29.6497 53.7043 31.5477 53.7043H71.2497L71.4175 53.7003C72.2539 53.6606 73.0521 53.3261 73.6675 52.753L100.779 27.5H94.7642L71.0327 49.6049ZM40.0626 42.0206H44.1619V27.5H40.0626V42.0206ZM52.2036 42.0206H56.303V27.5H52.2036V42.0206ZM68.4441 42.0206H64.3447V27.5H68.4441V42.0206Z" fill="currentColor"/><path d="M78.7289 64.5977L118.646 27.5H112.623L112.478 27.6345L76.0961 61.4475H28V65.5469H76.3131L76.4809 65.543C77.3162 65.5033 78.1138 65.1694 78.7289 64.5977Z" fill="currentColor"/></svg>
+    <span>Keycard Workshop - Request Dashboard</span>
+  </div>
+  <div id="controls">
+    <div id="identity"></div>
+    <button id="reset" type="button" title="New session" aria-label="New session"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button id="theme" type="button"></button>
+  </div>
+</header>
+<div id="workspace">
+  <section id="panel">
+    <div class="panel-head">
+      <h2 id="panel-title"></h2>
+      <div id="panel-tools">
+        <div id="summary"></div>
+        <button id="refresh" type="button" title="Refresh dashboard" aria-label="Refresh dashboard"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
+      </div>
+    </div>
+    <div class="panel-body" id="panel-body"></div>
+  </section>
+  <section id="chatpane">
+    <main id="transcript"></main>
+    <form id="composer" autocomplete="off">
+      <input id="prompt">
+      <button id="send">Send</button>
+    </form>
+  </section>
+</div>
+<script>
+  // Domain config: everything a different domain would change about this
+  // page lives in this one block. One contract sits outside it: records are
+  // keyed by an "id" field (the requests API and web.py depend on it).
+  const DOMAIN = {
+    panelTitle: "Request queue",
+    emptyHint: "The dashboard is empty. Ask the agent to file a request.",
+    placeholder: "Ask about the environment, or file a request",
+    columns: [["id", "ID", "key"], ["title", "title"], ["requester", "requester"], ["assignee", "assignee"], ["status", "status"]],
+    personFields: ["requester", "assignee"],
+    statusField: "status",
+    statusTone: { open: "warn", in_progress: "dim", done: "ok" },
+    priorityField: "priority",
+    priorityColumn: "title",
+  };
+
+  // Only priorities that deviate from the default get a mark; unknown values
+  // are never rendered, so hostile dashboard data can't inject anything here.
+  const PRIORITY_MARKS = {
+    high: {
+      cls: "high",
+      label: "high priority",
+      svg: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></svg>',
+    },
+    low: {
+      cls: "low",
+      label: "low priority",
+      svg: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
+    },
+  };
+
+  const transcript = document.getElementById("transcript");
+  const form = document.getElementById("composer");
+  const input = document.getElementById("prompt");
+  const send = document.getElementById("send");
+  const summary = document.getElementById("summary");
+  const panelBody = document.getElementById("panel-body");
+  const MOTION_OK = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Marks the status line while a tool runs; the line's flex layout centers it.
+  const TOOL_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
+
+  const themeButton = document.getElementById("theme");
+  // The button shows the mode a click switches to: moon in light, sun in dark.
+  const THEME_ICONS = {
+    dark: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+    light: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>',
+  };
+  function applyTheme(mode) {
+    const root = document.documentElement;
+    if (MOTION_OK && root.dataset.theme && root.dataset.theme !== mode) {
+      root.classList.add("theming");
+      setTimeout(() => root.classList.remove("theming"), 350);
+    }
+    root.dataset.theme = mode;
+    const next = mode === "dark" ? "light" : "dark";
+    themeButton.innerHTML = THEME_ICONS[next];
+    themeButton.setAttribute("aria-label", "Switch to " + next + " mode");
+    themeButton.title = "Switch to " + next + " mode";
+    localStorage.setItem("theme", mode);
+  }
+  applyTheme(localStorage.getItem("theme") || "light");
+  themeButton.addEventListener("click", () => {
+    applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  });
+
+  document.getElementById("reset").addEventListener("click", async () => {
+    try {
+      await fetch("/reset", { method: "POST" });
+    } catch {
+      return; // The agent is offline; there is nothing to clear.
+    }
+    transcript.textContent = "";
+    renderedRecords = "";
+    loadHistory(); // re-seeds the panel with the dashboard as it stands
+    input.focus();
+  });
+
+  let refreshing = false;
+  document.getElementById("refresh").addEventListener("click", async () => {
+    // A refresh is a fresh question; the old answer comes down while it's
+    // asked (and comes back with the result if it's still true). The poll
+    // pauses so it can't repaint the stale error mid-flight.
+    refreshing = true;
+    renderRecords(lastRecords, null);
+    try {
+      const panel = await (await fetch("/panel/refresh", { method: "POST" })).json();
+      renderRecords(panel.records, panel.error);
+    } catch {
+      // The agent is offline; the poll retries on its own.
+    } finally {
+      refreshing = false;
+    }
+  });
+
+  document.getElementById("panel-title").textContent = DOMAIN.panelTitle;
+  input.placeholder = DOMAIN.placeholder;
+
+  // Emails render as names ("kim.maida@example.com" becomes "Kim Maida") so the
+  // people columns survive a narrow panel; hover shows the raw address.
+  // Non-email identities (Chapter 0's "api-key") pass through untouched.
+  function personName(value) {
+    if (!value || !value.includes("@")) return value || "";
+    return value.split("@")[0].replace(/[._]/g, " ")
+      .replace(/(^|[\s-])([a-z])/g, (all, before, letter) => before + letter.toUpperCase());
+  }
+
+  let renderedRecords = "";
+  let lastRecords = [];
+  function renderRecords(records, error) {
+    lastRecords = records || [];
+    // Skip identical repaints: the 2s poll would otherwise rebuild the table
+    // every tick, wiping text selection and replaying the row entrances.
+    const snapshot = JSON.stringify([records || [], error || ""]);
+    if (snapshot === renderedRecords) return;
+    renderedRecords = snapshot;
+    summary.textContent = "";
+    panelBody.textContent = "";
+    if (error) {
+      // The dashboard's failure in its own words, above whatever view is
+      // left. URLs become links, so an authorization error carries its fix.
+      const note = document.createElement("div");
+      note.className = "panel-error";
+      let last = 0;
+      for (const match of error.matchAll(/https?:\/\/\S+/g)) {
+        // Prose punctuation isn't part of the URL; leave it as text.
+        const url = match[0].replace(/[.,;:)\]]+$/, "");
+        note.append(error.slice(last, match.index));
+        const link = document.createElement("a");
+        link.href = url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = url.split("?")[0];
+        note.append(link);
+        last = match.index + url.length;
+      }
+      note.append(error.slice(last));
+      panelBody.appendChild(note);
+    }
+    if (!records || !records.length) {
+      if (error) return;
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = DOMAIN.emptyHint;
+      panelBody.appendChild(empty);
+      return;
+    }
+    const counts = {};
+    for (const record of records) {
+      const status = record[DOMAIN.statusField];
+      counts[status] = (counts[status] || 0) + 1;
+    }
+    for (const [status, count] of Object.entries(counts)) {
+      const item = document.createElement("span");
+      item.className = DOMAIN.statusTone[status] || "dim";
+      item.textContent = count + " " + status;
+      summary.appendChild(item);
+    }
+    const table = document.createElement("table");
+    const head = table.createTHead().insertRow();
+    for (const [, label] of DOMAIN.columns) {
+      const th = document.createElement("th");
+      th.textContent = label;
+      head.appendChild(th);
+    }
+    const body = table.createTBody();
+    records.forEach((record, index) => {
+      const row = body.insertRow();
+      row.style.animationDelay = Math.min(index, 12) * 18 + "ms";
+      for (const [key, , cls] of DOMAIN.columns) {
+        const cell = row.insertCell();
+        if (key === DOMAIN.statusField) {
+          const badge = document.createElement("span");
+          badge.className = "badge " + (DOMAIN.statusTone[record[key]] || "dim");
+          badge.textContent = record[key];
+          cell.appendChild(badge);
+        } else if (DOMAIN.personFields.includes(key)) {
+          const raw = record[key] || "";
+          cell.textContent = personName(raw);
+          cell.className = "person";
+          if (cell.textContent !== raw) cell.title = raw;
+        } else {
+          cell.textContent = record[key];
+          if (cls) cell.className = cls;
+          const mark = key === DOMAIN.priorityColumn &&
+            PRIORITY_MARKS[record[DOMAIN.priorityField]];
+          if (mark) {
+            const icon = document.createElement("span");
+            icon.className = "prio " + mark.cls;
+            icon.title = mark.label;
+            icon.innerHTML = mark.svg;
+            cell.prepend(icon);
+          }
+        }
+      }
+    });
+    panelBody.appendChild(table);
+  }
+
+  // Minimal markdown for chat replies: headings, lists, fenced and inline
+  // code, bold, italic, http(s) links. Text is HTML-escaped before any
+  // markup is added; the dashboard is shared, so replies can quote hostile text.
+  function escapeHtml(text) {
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function inlineMarkdown(text) {
+    return text
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+        '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  }
+
+  function markdownBlocks(text) {
+    const html = [];
+    let list = null;
+    const closeList = () => { if (list) { html.push("</" + list + ">"); list = null; } };
+    for (const raw of text.split("\n")) {
+      const line = raw.trim();
+      if (!line) { closeList(); continue; }
+      const heading = line.match(/^#{1,4}\s+(.*)/);
+      const bullet = line.match(/^[-*]\s+(.*)/);
+      const numbered = line.match(/^\d+[.)]\s+(.*)/);
+      if (heading) {
+        closeList();
+        html.push("<h4>" + inlineMarkdown(heading[1]) + "</h4>");
+      } else if (bullet) {
+        if (list !== "ul") { closeList(); html.push("<ul>"); list = "ul"; }
+        html.push("<li>" + inlineMarkdown(bullet[1]) + "</li>");
+      } else if (numbered) {
+        if (list !== "ol") { closeList(); html.push("<ol>"); list = "ol"; }
+        html.push("<li>" + inlineMarkdown(numbered[1]) + "</li>");
+      } else {
+        closeList();
+        html.push("<p>" + inlineMarkdown(line) + "</p>");
+      }
+    }
+    closeList();
+    return html.join("");
+  }
+
+  function renderMarkdown(text) {
+    return String(text).split("```").map((segment, index) => {
+      if (index % 2) {
+        const body = segment.replace(/^[\w-]*\n/, "");
+        return "<pre><code>" + escapeHtml(body) + "</code></pre>";
+      }
+      return markdownBlocks(escapeHtml(segment));
+    }).join("");
+  }
+
+  // Streamed text is cut mid-markup constantly. Close dangling bold and
+  // inline code and hide a half-typed link, so markdown formats as it
+  // streams instead of flashing raw markers. Complete text passes through
+  // unchanged.
+  function stabilizeMarkdown(s) {
+    if (s.split("```").length % 2 === 0) return s; // mid-fence: it's code
+    s = s.replace(/\[[^\]]*(\]\([^)\s]*)?$/, "");
+    if ((s.split("`").length - 1) % 2) s += "`";
+    if (s.split("**").length % 2 === 0) s += "**";
+    return s;
+  }
+
+  function scrollToEnd(instant) {
+    transcript.scrollTo({
+      top: transcript.scrollHeight,
+      behavior: instant || !MOTION_OK ? "auto" : "smooth",
+    });
+  }
+
+  function addMessage(role, text) {
+    const row = document.createElement("div");
+    row.className = "msg " + role;
+    const label = document.createElement("div");
+    label.className = "label";
+    label.textContent = role === "you" ? "YOU" : "AGENT";
+    const card = document.createElement("div");
+    card.className = "card";
+    // The agent speaks markdown; what you typed stays literal.
+    if (role === "you") card.textContent = text;
+    else card.innerHTML = renderMarkdown(text);
+    row.append(label, card);
+    transcript.appendChild(row);
+    scrollToEnd();
+    return card;
+  }
+
+  async function loadIdentity() {
+    const me = await (await fetch("/me")).json();
+    const slot = document.getElementById("identity");
+    slot.textContent = "";
+    if (!me.signed_in) {
+      // No button until the server advertises a real login (Chapter 4).
+      if (me.login) {
+        const link = document.createElement("a");
+        link.className = "signin";
+        link.href = me.login;
+        link.textContent = "Sign in";
+        slot.appendChild(link);
+      }
+      return me;
+    }
+    const email = document.createElement("span");
+    email.className = "email";
+    email.textContent = me.identity;
+    slot.appendChild(email);
+    for (const group of me.groups) {
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = group;
+      slot.appendChild(tag);
+    }
+    const out = document.createElement("a");
+    out.className = "signout";
+    out.href = "/logout";
+    // Keycard's logged-out page doesn't redirect back, so sign out in a new
+    // tab; this page stays put, and a refresh shows the signed-out state.
+    out.target = "_blank";
+    out.rel = "noopener";
+    out.textContent = "Sign out";
+    slot.appendChild(out);
+    return me;
+  }
+
+  async function loadHistory() {
+    const history = await (await fetch("/history")).json();
+    for (const turn of history.turns) addMessage(turn.role, turn.text);
+    renderRecords(history.records, history.error);
+    scrollToEnd(true);
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const message = input.value.trim();
+    if (!message) return;
+    input.value = "";
+    input.disabled = true;
+    send.disabled = true;
+    addMessage("you", message);
+    const waiting = document.createElement("div");
+    waiting.className = "waiting";
+    waiting.innerHTML = 'responding<span class="cursor"></span>';
+    transcript.appendChild(waiting);
+    scrollToEnd();
+    let card = null;
+    let finished = false;
+    // The model's stream arrives in multi-word slabs a few times a second;
+    // reveal it a few characters per frame instead, pacing by the backlog so
+    // the display never falls far behind the network but reads as typing.
+    let text = "";
+    let shown = 0;
+    let painting = 0;
+    const paint = () => {
+      painting = 0;
+      if (!text) return; // never render an empty bubble
+      if (!card) card = addMessage("agent", "");
+      shown = MOTION_OK
+        ? Math.min(text.length, shown + Math.max(2, (text.length - shown) >> 4))
+        : text.length;
+      card.innerHTML = renderMarkdown(stabilizeMarkdown(text.slice(0, shown)));
+      // Follow the tail only while the user is already at the bottom.
+      if (transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight < 60) {
+        scrollToEnd(true);
+      }
+      if (shown < text.length) painting = requestAnimationFrame(paint);
+    };
+    const repaint = () => { if (!painting) painting = requestAnimationFrame(paint); };
+    try {
+      const response = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+      if (!response.ok) throw new Error(response.status);
+      // The reply streams back as JSON lines: "delta" appends the model's
+      // tokens to a live bubble, "tool" names a tool while it runs, "restart"
+      // hands the bubble to a new model step (only the final step's text is
+      // the reply), and "reply" ends the turn with the definitive text and
+      // the panel's records.
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffered = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        buffered += decoder.decode(value || new Uint8Array(), { stream: !done });
+        const lines = buffered.split("\n");
+        buffered = lines.pop();
+        for (const line of lines) {
+          if (!line) continue;
+          const event = JSON.parse(line);
+          if (event.tool) {
+            // The status line names the running tool; appending re-slots it
+            // below whatever the model already said.
+            waiting.innerHTML = TOOL_ICON + escapeHtml(event.tool) +
+              '<span class="cursor"></span>';
+            transcript.appendChild(waiting);
+            scrollToEnd(true);
+            continue;
+          }
+          if (event.restart) {
+            // A new step owns the bubble, but keep the old text up until its
+            // first words arrive; a cleared bubble reads as a hang.
+            text = "";
+            shown = 0;
+            continue;
+          }
+          if (event.delta) {
+            text += event.delta;
+            waiting.remove();
+            repaint();
+          }
+          if ("reply" in event) {
+            finished = true;
+            text = event.reply;
+            renderRecords(event.records, event.error);
+            waiting.remove();
+            repaint();
+          }
+        }
+        if (done) break;
+      }
+      // A stream that ends without the final line means the agent died
+      // mid-turn; the partial bubble stays, but say something went wrong.
+      if (!finished) throw new Error("incomplete stream");
+    } catch {
+      addMessage("agent", "Something went wrong. Check the agent's terminal.");
+    } finally {
+      waiting.remove();
+      input.disabled = false;
+      send.disabled = false;
+      input.focus();
+    }
+  });
+
+  // Signed out is a state, not an error: until there's a user to act for,
+  // the app is a door, not a dashboard. The gate only engages once the
+  // server advertises a login (Chapter 4); before that the page runs open.
+  function renderGate(login) {
+    const workspace = document.getElementById("workspace");
+    workspace.innerHTML = "";
+    const gate = document.createElement("div");
+    gate.className = "gate";
+    const card = document.createElement("div");
+    card.className = "gate-card";
+    const title = document.createElement("h2");
+    title.textContent = "Sign in to get started";
+    const blurb = document.createElement("p");
+    blurb.textContent =
+      "The agent acts on your behalf, so it needs to know who you are " +
+      "before it can do anything.";
+    const link = document.createElement("a");
+    link.className = "signin";
+    link.href = login;
+    link.textContent = "Sign in";
+    card.append(title, blurb, link);
+    gate.appendChild(card);
+    workspace.appendChild(gate);
+  }
+
+  (async () => {
+    const me = await loadIdentity();
+    if (me && !me.signed_in && me.login) {
+      renderGate(me.login);
+      return;
+    }
+    // Awaited so the poll below cannot paint the server's pre-reload panel
+    // state (a stale authorization error, say) before the fresh snapshot lands.
+    await loadHistory();
+    // The panel refreshes while the agent works a turn, so requests appear
+    // and move as each tool result lands, not only when the reply arrives.
+    setInterval(async () => {
+      if (refreshing) return;
+      try {
+        const panel = await (await fetch("/panel")).json();
+        if (!refreshing) renderRecords(panel.records, panel.error);
+      } catch {
+        // The agent is restarting or offline; the next tick retries.
+      }
+    }, 2000);
+  })();
+</script>
+</body>
+</html>

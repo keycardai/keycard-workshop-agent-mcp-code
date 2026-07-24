@@ -1,0 +1,20 @@
+# Secrets
+.env
+
+# Keycard CLI
+keycard.toml
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Local tooling state, except the workshop skill attendees clone
+.vscode/*
+.claude/*
+!.claude/skills/
+.claude/skills/keycard-workshop/settings.local.json
+
+# OS
+.DS_Store
+
