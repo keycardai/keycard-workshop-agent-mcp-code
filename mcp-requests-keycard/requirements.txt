@@ -1,5 +1,6 @@
 fastmcp==3.4.4
-keycardai-fastmcp==0.4.0
-keycardai-oauth==0.20.0
+keycardai-fastmcp==0.5.0
+keycardai-mcp>=1,<2
+keycardai-oauth==0.21.1
 httpx==0.28.1
 python-dotenv>=1.0
