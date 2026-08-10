@@ -1,7 +1,7 @@
 """Restore agent/ to a known-good checkpoint.
 
 Usage:
-    python scripts/restore_checkpoint.py [starter|ch03-agent-as-itself|ch04-user-login|ch05-on-behalf-of|finished]
+    python scripts/restore_checkpoint.py [starter|ch04-agent-as-itself|ch05-user-login|ch06-on-behalf-of|finished]
 
 Replaces the Python and HTML files in agent/ with the checkpoint's set; files
 the checkpoint doesn't have are removed (e.g. restoring to starter removes
@@ -20,9 +20,9 @@ ROOT = Path(__file__).resolve().parents[1]
 AGENT = ROOT / "agent"
 SOURCES = {
     "starter": ROOT / "checkpoints" / "starter",
-    "ch03-agent-as-itself": ROOT / "checkpoints" / "ch03-agent-as-itself",
-    "ch04-user-login": ROOT / "checkpoints" / "ch04-user-login",
-    "ch05-on-behalf-of": ROOT / "checkpoints" / "ch05-on-behalf-of",
+    "ch04-agent-as-itself": ROOT / "checkpoints" / "ch04-agent-as-itself",
+    "ch05-user-login": ROOT / "checkpoints" / "ch05-user-login",
+    "ch06-on-behalf-of": ROOT / "checkpoints" / "ch06-on-behalf-of",
     "finished": ROOT / "agent-keycard",
 }
 

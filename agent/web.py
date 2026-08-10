@@ -26,13 +26,13 @@ app = FastAPI(title="Workshop agent")
 
 @app.get("/login")
 def login():
-    # TODO(ch04): replace this whole route with the Keycard sign-in router
+    # TODO(ch05): replace this whole route with the Keycard sign-in router
     # from the workshop guide (and add the keycard imports at the top of the
     # file). The local import below leaves with it.
     from fastapi.responses import HTMLResponse
 
     return HTMLResponse(
-        "<p>Login isn't wired up yet; that's Chapter 4.</p>"
+        "<p>Login isn't wired up yet; that's Chapter 5.</p>"
         '<p><a href="/">Back to chat</a></p>'
     )
 
@@ -218,7 +218,7 @@ def reset() -> dict:
 
 @app.get("/me")
 def me() -> dict:
-    # TODO(ch04): replace this stub with the identity block from the
+    # TODO(ch05): replace this stub with the identity block from the
     # workshop guide.
     return {"signed_in": False}
 

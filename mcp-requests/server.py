@@ -1,6 +1,6 @@
 """The requests MCP server: the team's shared queue of asks.
 
-Chapter 1 protects this server with Keycard and pushes the caller's identity
+Chapter 2 protects this server with Keycard and pushes the caller's identity
 through to the dashboard. Until then it is wide open: anyone can create, change,
 or delete anyone's requests, and the dashboard attributes it all to the API key.
 """
@@ -17,7 +17,7 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 
 STATUSES = ("open", "in_progress", "done")
 
-# TODO(ch01): protect this server with Keycard (the workshop guide has the
+# TODO(ch02): protect this server with Keycard (the workshop guide has the
 # AuthProvider block to paste).
 mcp = FastMCP("Requests MCP Server")
 

@@ -27,8 +27,8 @@ def make_directory_tools(settings: Settings) -> list[BaseTool]:
         return _call("get_entry", {"entry_id": entry_id})
 
     def _call(tool_name: str, args: dict) -> str:
-        # TODO(ch03): a shared key from .env is the whole authentication story
-        # here. Chapter 3 replaces it with the key the agent fetches from the
+        # TODO(ch04): a shared key from .env is the whole authentication story
+        # here. Chapter 4 replaces it with the key the agent fetches from the
         # Keycard vault with its own identity, per call.
         return call_mcp(settings.directory_mcp, tool_name, args, settings.directory_key)
 

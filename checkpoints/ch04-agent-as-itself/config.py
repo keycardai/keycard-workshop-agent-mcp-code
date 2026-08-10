@@ -9,11 +9,11 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 _SET_IN_CHAPTER = {
     "MODEL": "Chapter 0",
     "DIRECTORY_KEY": "Chapter 0",
-    "AGENT_RESOURCE": "Chapter 2",
-    "KEYCARD_ZONE_URL": "Chapter 2",
-    "KEYCARD_CLIENT_ID": "Chapter 2",
-    "KEYCARD_CLIENT_SECRET": "Chapter 2",
-    "LLM_KEY_RESOURCE": "Chapter 7",
+    "AGENT_RESOURCE": "Chapter 3",
+    "KEYCARD_ZONE_URL": "Chapter 3",
+    "KEYCARD_CLIENT_ID": "Chapter 3",
+    "KEYCARD_CLIENT_SECRET": "Chapter 3",
+    "LLM_KEY_RESOURCE": "Chapter 8",
 }
 
 

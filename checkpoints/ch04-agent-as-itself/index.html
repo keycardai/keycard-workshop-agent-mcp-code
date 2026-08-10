@@ -660,7 +660,7 @@
     const slot = document.getElementById("identity");
     slot.textContent = "";
     if (!me.signed_in) {
-      // No button until the server advertises a real login (Chapter 4).
+      // No button until the server advertises a real login (Chapter 5).
       if (me.login) {
         const link = document.createElement("a");
         link.className = "signin";
@@ -804,7 +804,7 @@
 
   // Signed out is a state, not an error: until there's a user to act for,
   // the app is a door, not a dashboard. The gate only engages once the
-  // server advertises a login (Chapter 4); before that the page runs open.
+  // server advertises a login (Chapter 5); before that the page runs open.
   function renderGate(login) {
     const workspace = document.getElementById("workspace");
     workspace.innerHTML = "";

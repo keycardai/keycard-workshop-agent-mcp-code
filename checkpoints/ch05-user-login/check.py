@@ -1,4 +1,4 @@
-"""Preflight for Chapter 2: verify each connection before going further."""
+"""Preflight for Chapter 3: verify each connection before going further."""
 
 from collections.abc import Callable
 
@@ -42,7 +42,7 @@ def _check_discovery(settings: Settings) -> None:
 
 def _check_credentials(settings: Settings) -> None:
     # Presence only; the credentials are proven against Keycard on first
-    # use (Chapter 3).
+    # use (Chapter 4).
     require(settings.keycard_client_id, "KEYCARD_CLIENT_ID")
     require(settings.keycard_client_secret, "KEYCARD_CLIENT_SECRET")
 

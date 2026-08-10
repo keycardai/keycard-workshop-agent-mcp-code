@@ -23,8 +23,8 @@ def _require(name: str) -> str:
 
 
 def _headers() -> dict:
-    # TODO(ch01): the shared API key is the antipattern this workshop tears
-    # out. Chapter 1 replaces this body with a per-call token exchange.
+    # TODO(ch02): the shared API key is the antipattern this workshop tears
+    # out. Chapter 2 replaces this body with a per-call token exchange.
     return {"X-API-Key": _require("REQUESTS_API_KEY")}
 
 

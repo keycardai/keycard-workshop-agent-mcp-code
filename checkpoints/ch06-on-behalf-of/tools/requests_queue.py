@@ -3,7 +3,7 @@
 The dashboard is user data, so every call is meant to go out on the
 signed-in user's behalf: the agent exchanges the user's token for a
 credential minted for the dashboard (RFC 8693), one per call, never
-stored. Chapter 5 wires that exchange. Compare tools/directory.py,
+stored. Chapter 6 wires that exchange. Compare tools/directory.py,
 where the agent acts as itself.
 """
 

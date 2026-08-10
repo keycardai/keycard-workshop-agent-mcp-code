@@ -37,7 +37,7 @@ def login() -> Response:
         # The agent resource must be requested explicitly during authorization
         # AND code exchange (RFC 8707); it becomes the token's audience, and
         # only the app that provides that audience may exchange the token
-        # onward, which Chapter 5 does. The requests MCP resource rides along
+        # onward, which Chapter 6 does. The requests MCP resource rides along
         # for consent only: naming it makes the consent screen ask again
         # whenever consent is missing, instead of trusting the zone to
         # notice a dependency change. The token stays audienced to the agent
