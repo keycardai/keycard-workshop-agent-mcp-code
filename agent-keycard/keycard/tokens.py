@@ -1,29 +1,19 @@
 import time
 
 import httpx
-from keycardai.oauth import BasicAuth, Client
-from keycardai.oauth.exceptions import OAuthProtocolError
 from keycardai.oauth.utils.jwt import get_claims
 
-from ..config import Settings, load_settings, require
-
-# Error codes that mean "consent is missing or expired"; the user can
-# fix these by signing in again. A policy `access_denied` is deliberately not
-# here: re-authenticating won't change the decision.
-_CONSENT_CODES = {"insufficient_authorization", "consent_required"}
+from ..config import load_settings
 
 
 class NotLoggedIn(Exception):
     pass
 
 
-class ExchangeDenied(Exception):
-    pass
-
-
 class TokenStore:
-    """Holds the signed-in user's token, in memory only. Exchanged
-    credentials are never stored; request one per call with `exchange()`.
+    """Holds the signed-in user's token, in memory only. Per-call resource
+    credentials are minted by the grant middleware, which exchanges this
+    token; they are never stored here.
     """
 
     def __init__(self) -> None:
@@ -104,44 +94,6 @@ class TokenStore:
         return groups if isinstance(groups, list) else [groups]
 
 
-# The process's single user session: the sign-in callback fills it, tools
-# exchange from it.
+# The process's single user session: the sign-in callback fills it, the grant
+# middleware exchanges from it.
 store = TokenStore()
-
-
-def exchange(settings: Settings, resource: str) -> str:
-    """Exchange the user's token for a short-lived credential scoped to
-    `resource` (RFC 8693).
-    """
-    with Client(
-        require(settings.keycard_zone_url, "KEYCARD_ZONE_URL"),
-        auth=BasicAuth(
-            require(settings.keycard_client_id, "KEYCARD_CLIENT_ID"),
-            require(settings.keycard_client_secret, "KEYCARD_CLIENT_SECRET"),
-        ),
-    ) as client:
-        try:
-            response = client.exchange_token(
-                subject_token=store.user_token,
-                resource=resource,
-            )
-        except OAuthProtocolError as exc:
-            if exc.error in _CONSENT_CODES:
-                raise NotLoggedIn(
-                    "Consent for this resource is missing or expired. "
-                    "Sign in again and approve access."
-                ) from exc
-            if exc.error == "access_denied":
-                raise ExchangeDenied(
-                    "Keycard's policy denied this request. Signing in again "
-                    "won't change that. Check who you're signed in as (the "
-                    "header of the chat page) and flag an instructor."
-                ) from exc
-            if exc.error == "invalid_target":
-                raise ExchangeDenied(
-                    f"Keycard doesn't recognize the resource {resource!r}. "
-                    "REQUESTS_MCP must match the identifier registered in "
-                    "Keycard byte-for-byte."
-                ) from exc
-            raise
-    return response.access_token

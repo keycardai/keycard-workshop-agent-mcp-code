@@ -41,8 +41,8 @@ def _check_discovery(settings: Settings) -> None:
 
 
 def _check_credentials(settings: Settings) -> None:
-    # Presence only; the credentials are proven against Keycard on first
-    # use (Chapter 4).
+    # Presence only; the credentials are proven on the first tool call,
+    # when the grant middleware exchanges them for a resource token.
     require(settings.keycard_client_id, "KEYCARD_CLIENT_ID")
     require(settings.keycard_client_secret, "KEYCARD_CLIENT_SECRET")
 

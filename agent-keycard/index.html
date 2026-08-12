@@ -696,17 +696,48 @@
     const history = await (await fetch("/history")).json();
     for (const turn of history.turns) addMessage(turn.role, turn.text);
     renderRecords(history.records, history.error);
+    // A paused run survives the sign-in round trip; offer to pick it up.
+    if (history.pending) {
+      addInterrupt({ message: "A previous run is paused, waiting on authorization." });
+    }
     scrollToEnd(true);
   }
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const message = input.value.trim();
-    if (!message) return;
-    input.value = "";
+  // A paused run's card: the middleware stopped mid-turn for sign-in or
+  // consent. The link opens where that happens; Resume retries the run.
+  function addInterrupt(interrupt) {
+    const note = document.createElement("div");
+    note.className = "panel-error";
+    note.append((interrupt.message || "The agent is waiting on authorization.") + " ");
+    if (interrupt.url) {
+      const link = document.createElement("a");
+      link.href = interrupt.url;
+      // Sign-in ("/login") round-trips this page; consent happens elsewhere
+      // and the user comes back to press Resume.
+      if (!interrupt.url.startsWith("/")) {
+        link.target = "_blank";
+        link.rel = "noopener";
+      }
+      link.textContent = interrupt.url.startsWith("/") ? "Sign in" : "Grant access";
+      note.append(link, " ");
+    }
+    const resume = document.createElement("button");
+    resume.type = "button";
+    resume.textContent = "Resume";
+    resume.addEventListener("click", () => {
+      resume.disabled = true;
+      runTurn(() => fetch("/chat/resume", { method: "POST" }));
+    });
+    note.append(resume);
+    transcript.appendChild(note);
+    scrollToEnd();
+  }
+
+  // One agent run, streamed into the transcript: the submit handler and the
+  // Resume button differ only in the request that starts the run.
+  async function runTurn(start) {
     input.disabled = true;
     send.disabled = true;
-    addMessage("you", message);
     const waiting = document.createElement("div");
     waiting.className = "waiting";
     waiting.innerHTML = 'responding<span class="cursor"></span>';
@@ -736,17 +767,14 @@
     };
     const repaint = () => { if (!painting) painting = requestAnimationFrame(paint); };
     try {
-      const response = await fetch("/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
-      });
+      const response = await start();
       if (!response.ok) throw new Error(response.status);
       // The reply streams back as JSON lines: "delta" appends the model's
       // tokens to a live bubble, "tool" names a tool while it runs, "restart"
       // hands the bubble to a new model step (only the final step's text is
-      // the reply), and "reply" ends the turn with the definitive text and
-      // the panel's records.
+      // the reply), "interrupt" pauses the turn for sign-in or consent, and
+      // "reply" ends the turn with the definitive text and the panel's
+      // records.
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffered = "";
@@ -779,6 +807,14 @@
             waiting.remove();
             repaint();
           }
+          if (event.interrupt) {
+            // The run is paused, not dead: the middleware is waiting on
+            // sign-in or consent. Nothing joined the history yet.
+            finished = true;
+            renderRecords(event.records, event.error);
+            waiting.remove();
+            addInterrupt(event.interrupt);
+          }
           if ("reply" in event) {
             finished = true;
             text = event.reply;
@@ -800,6 +836,19 @@
       send.disabled = false;
       input.focus();
     }
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const message = input.value.trim();
+    if (!message) return;
+    input.value = "";
+    addMessage("you", message);
+    runTurn(() => fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+    }));
   });
 
   // Signed out is a state, not an error: until there's a user to act for,

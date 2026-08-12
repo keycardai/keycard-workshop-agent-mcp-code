@@ -2,6 +2,8 @@ langchain==1.3.13
 langchain-openai==1.3.5
 langchain-anthropic==1.4.8
 keycardai-oauth==0.21.1
+# Spike only (python-sdk PR #229): swap for the published pin before this ships.
+keycardai-langchain @ git+https://github.com/keycardai/python-sdk@larry/keycardai-langchain#subdirectory=packages/langchain
 fastmcp==3.4.4
 httpx==0.28.1
 python-dotenv==1.2.2
