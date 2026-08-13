@@ -1,17 +1,15 @@
 """Tools for the requests MCP server.
 
 The dashboard is user data, so every call is meant to go out on the
-signed-in user's behalf: the agent exchanges the user's token for a
-credential minted for the dashboard (RFC 8693), one per call, never
-stored. Chapter 6 wires that exchange. Compare tools/directory.py,
-where the agent acts as itself.
+signed-in user's behalf: the grant middleware exchanges the user's token
+for a credential minted for the dashboard (RFC 8693), one per call, never
+stored. Compare tools/directory.py, where the run's identity varies.
 """
 
-from keycardai.oauth.exceptions import OAuthError
+from keycardai.langchain import get_access_context
 from langchain_core.tools import BaseTool, tool
 
-from ..config import MissingConfig, Settings
-from ..keycard.tokens import ExchangeDenied, NotLoggedIn, exchange
+from ..config import Settings
 from .remote import call_mcp
 
 # The tools the data panel renders from; web.py folds tool output with these
@@ -72,13 +70,41 @@ def make_request_tools(settings: Settings) -> list[BaseTool]:
         return _call("reassign_request", {"request_id": request_id, "assignee": assignee})
 
     def _call(tool_name: str, args: dict) -> str:
-        try:
-            credential = exchange(settings, settings.requests_mcp)
-        except (MissingConfig, NotLoggedIn, ExchangeDenied) as exc:
-            return f"Authorization error: {exc}"
-        except OAuthError as exc:
-            return f"Authorization error: could not reach Keycard ({exc})."
+        # The middleware already asked Keycard before this ran; failures are
+        # recorded on the AccessContext, not raised. With the consent and
+        # sign-in interrupts wired, most of these surface only when the
+        # interrupt path is exhausted or unavailable.
+        access = get_access_context()
+        if access.has_error():
+            return f"Authorization error: {access.get_error()['message']}"
+        error = access.get_resource_error(settings.requests_mcp)
+        if error is not None:
+            return f"Authorization error: {_describe(error)}"
+        credential = access.access(settings.requests_mcp).access_token
         return call_mcp(settings.requests_mcp, tool_name, args, credential)
+
+    def _describe(error: dict) -> str:
+        # The same taxonomy the hand-wired exchange used to raise, so the
+        # chat page's error rendering is unchanged.
+        code = error.get("code")
+        if code in ("insufficient_authorization", "consent_required"):
+            return (
+                "Consent for this resource is missing or expired. "
+                "Sign in again and approve access."
+            )
+        if code == "access_denied":
+            return (
+                "Keycard's policy denied this request. Signing in again "
+                "won't change that. Check who you're signed in as (the "
+                "header of the chat page) and flag an instructor."
+            )
+        if code == "invalid_target":
+            return (
+                f"Keycard doesn't recognize the resource {settings.requests_mcp!r}. "
+                "REQUESTS_MCP must match the identifier registered in "
+                "Keycard byte-for-byte."
+            )
+        return error.get("description") or error.get("message") or str(error)
 
     return [
         list_requests,

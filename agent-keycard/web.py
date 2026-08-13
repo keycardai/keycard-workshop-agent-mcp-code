@@ -157,7 +157,7 @@ def _stream_turn(graph_input, thread_id: str):
             ) + "\n"
             return
         # Assembled per turn: nothing the model holds outlives the request.
-        # The Keycard middleware is the one exception — shared, because it
+        # The Keycard middleware is the one exception, shared because it
         # holds no identity, only warm plumbing (see _middleware).
         try:
             agent = build_agent(

@@ -78,9 +78,9 @@ Start with the working tree:
 |---|---|
 | `TODO(ch02)` in `mcp-requests/server.py` and `storage.py`; no `from keycardai.fastmcp import AuthProvider` import on the server | Chapter 0 or 1 (the tour leaves no code trace; Chapter 2 not started) |
 | `mcp-requests/server.py` protected with `AuthProvider`, and `storage.py`'s `_headers` exchanges the caller's token (no `TODO(ch02)`); `TODO(ch04)` still in `agent/tools/directory.py` | Chapter 2 or Chapter 3 (Chapter 3 is console + `.env` only; use the `.env` tie-breakers to split them) |
-| `_credential` in `agent/tools/directory.py` minting a client credentials grant for the vault key (no `TODO(ch04)`); `TODO(ch05)` still in `agent/web.py` and no `agent/keycard/` | Chapter 4 |
-| `agent/keycard/login.py` exists and `agent/web.py` has no `TODO(ch05)`; `TODO(ch06)` still in `agent/tools/requests_queue.py` | Chapter 5 |
-| `exchange(settings, settings.requests_mcp)` in `agent/tools/requests_queue.py` (no `TODO(ch06)`); `agent/llm.py` still reads the key from the environment | Chapter 6 or Chapter 7 (Chapter 7 is console-only, so it leaves no code trace) |
+| `get_access_context` in `agent/tools/directory.py` reading the grant middleware's vault-key credential (no `TODO(ch04)`); `TODO(ch05)` still in `agent/web.py` and no `agent/keycard/` | Chapter 4 |
+| `agent/keycard/login.py` exists and `agent/web.py` has no `TODO(ch05)` (it wires `KeycardGrantMiddleware` and serves `/chat/resume`); `TODO(ch06)` still in `agent/tools/requests_queue.py` | Chapter 5 |
+| `get_access_context` in `agent/tools/requests_queue.py` (no `TODO(ch06)`); `agent/llm.py` still reads the key from the environment | Chapter 6 or Chapter 7 (Chapter 7 is console-only, so it leaves no code trace) |
 | `_api_key` in `agent/llm.py` minting a client credentials grant for the LLM key resource | Chapter 8 or Chapter 9 (Chapter 9 is a walkthrough, so it changes no code) |
 
 **`.env` tie-breakers:** `MODEL` and `DIRECTORY_KEY` set mean Chapter 0's env

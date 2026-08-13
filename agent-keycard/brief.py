@@ -3,7 +3,7 @@
 The agent runs as itself (KeycardIdentity(as_self=True)): the vault releases
 the directory key to the application's own identity, per call, and every
 retrieval is an audit event attributed to the agent alone. As-itself runs
-never pause for sign-in or consent — there is no user to send anywhere — so
+never pause for sign-in or consent (there is no user to send anywhere), so
 this needs no checkpointer and no interrupt handling.
 
 Run: python -m agent-keycard brief

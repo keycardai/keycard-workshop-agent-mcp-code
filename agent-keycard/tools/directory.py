@@ -3,7 +3,7 @@
 The directory is hosted for the whole workshop and holds org data, not user
 data. The grant middleware releases the directory key from the Keycard vault
 per call, under whichever identity the run carries: the application's own
-(the background brief) or the signed-in user's (chat — the user asked, so the
+(the background brief) or the signed-in user's (chat: the user asked, so the
 chain carries the user). Compare tools/requests_queue.py, where the calls are
 always meant to go out on the user's behalf.
 """
@@ -32,7 +32,17 @@ def make_directory_tools(settings: Settings) -> list[BaseTool]:
     def _call(tool_name: str, args: dict) -> str:
         # The middleware already asked Keycard before this ran; failures are
         # recorded on the AccessContext, not raised.
-        access = get_access_context()
+        try:
+            access = get_access_context()
+        except RuntimeError:
+            # Chat runs without the grant middleware until Chapter 5's web.py
+            # wires it in; until then this tool has no identity to act under.
+            return (
+                "Authorization error: this tool runs under the grant "
+                "middleware, and this run carries no identity. Sign in "
+                "(Chapter 5), or use `python -m agent brief` for the "
+                "as-itself run."
+            )
         if access.has_error():
             return f"Authorization error: {access.get_error()['message']}"
         error = access.get_resource_error(settings.directory_key_resource)

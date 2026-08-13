@@ -1,10 +1,15 @@
 import os
 
+from keycardai.langchain import KeycardGrantMiddleware, KeycardIdentity
 from langchain.agents import create_agent
 from langchain.agents.middleware import wrap_model_call
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.tools import BaseTool
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
+
+from .config import Settings, require
+from .tools.requests_queue import REQUEST_TOOLS
 
 SYSTEM_PROMPT = (
     "You are the team's desk assistant. You can consult the environment "
@@ -46,8 +51,36 @@ def _repair_thinking_blocks(request, handler):
     return handler(request)
 
 
+def make_keycard_middleware(settings: Settings) -> KeycardGrantMiddleware:
+    """One middleware for every run shape: before each tool call it takes the
+    run's KeycardIdentity (the agent itself, or the signed-in user) to Keycard
+    and comes back with a token minted for that tool's resource. Nothing is
+    stored; every mint lands in the audit log.
+    """
+    return KeycardGrantMiddleware(
+        zone_url=require(settings.keycard_zone_url, "KEYCARD_ZONE_URL"),
+        client_id=require(settings.keycard_client_id, "KEYCARD_CLIENT_ID"),
+        client_secret=require(settings.keycard_client_secret, "KEYCARD_CLIENT_SECRET"),
+        # Every tool is mapped explicitly; an unmapped tool gets no access.
+        resources=[],
+        tool_resources={
+            "search_directory": [settings.directory_key_resource],
+            "get_entry": [settings.directory_key_resource],
+            **{name: [settings.requests_mcp] for name in REQUEST_TOOLS},
+        },
+        # A run with no identity pauses for sign-in; a missing grant pauses
+        # for consent. As-itself runs never pause: no user to send anywhere.
+        sign_in_url="/login",
+        authorization_url=settings.keycard_zone_url,
+    )
+
+
 def build_agent(
-    llm: BaseChatModel, tools: list[BaseTool], identity: str | None = None
+    llm: BaseChatModel,
+    tools: list[BaseTool],
+    identity: str | None = None,
+    keycard: KeycardGrantMiddleware | None = None,
+    checkpointer: BaseCheckpointSaver | None = None,
 ) -> CompiledStateGraph:
     # A hint for guessing addresses from names, not an allowlist; read here
     # with a default because nothing else configures the prompt.
@@ -59,9 +92,12 @@ def build_agent(
             f' The signed-in user is {identity}; '
             'read "me" and "my requests" as them.'
         )
+    middleware = [keycard, _repair_thinking_blocks] if keycard else [_repair_thinking_blocks]
     return create_agent(
         llm,
         tools=tools,
         system_prompt=system_prompt,
-        middleware=[_repair_thinking_blocks],
+        middleware=middleware,
+        context_schema=KeycardIdentity,
+        checkpointer=checkpointer,
     )

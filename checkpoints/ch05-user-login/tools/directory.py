@@ -1,16 +1,17 @@
 """Tools for the directory MCP server.
 
 The directory is hosted for the whole workshop and holds org data, not user
-data, so the agent asks as itself: a client credentials grant with the
-application's own identity releases the directory key from the Keycard vault,
-per call. Compare tools/requests_queue.py, where a user is in the chain.
+data. The grant middleware releases the directory key from the Keycard vault
+per call, under whichever identity the run carries: the application's own
+(the background brief) or the signed-in user's (chat: the user asked, so the
+chain carries the user). Compare tools/requests_queue.py, where the calls are
+always meant to go out on the user's behalf.
 """
 
-from keycardai.oauth import BasicAuth, Client
-from keycardai.oauth.exceptions import OAuthError, OAuthProtocolError
+from keycardai.langchain import get_access_context
 from langchain_core.tools import BaseTool, tool
 
-from ..config import MissingConfig, Settings, require
+from ..config import Settings
 from .remote import call_mcp
 
 
@@ -28,37 +29,33 @@ def make_directory_tools(settings: Settings) -> list[BaseTool]:
         rb-401-vs-403."""
         return _call("get_entry", {"entry_id": entry_id})
 
-    def _credential() -> str:
-        # The agent's own identity, proven with its client credentials; the
-        # vault releases the directory key to it per call, and every retrieval
-        # lands in the audit log. Nothing is stored.
-        with Client(
-            require(settings.keycard_zone_url, "KEYCARD_ZONE_URL"),
-            auth=BasicAuth(
-                require(settings.keycard_client_id, "KEYCARD_CLIENT_ID"),
-                require(settings.keycard_client_secret, "KEYCARD_CLIENT_SECRET"),
-            ),
-        ) as client:
-            response = client.client_credentials_grant(
-                resource=require(settings.directory_key_resource, "DIRECTORY_KEY_RESOURCE")
-            )
-        return response.access_token
-
     def _call(tool_name: str, args: dict) -> str:
+        # The middleware already asked Keycard before this ran; failures are
+        # recorded on the AccessContext, not raised.
         try:
-            credential = _credential()
-        except MissingConfig as exc:
-            return f"Authorization error: {exc}"
-        except OAuthProtocolError as exc:
-            if exc.error == "invalid_target":
+            access = get_access_context()
+        except RuntimeError:
+            # Chat runs without the grant middleware until Chapter 5's web.py
+            # wires it in; until then this tool has no identity to act under.
+            return (
+                "Authorization error: this tool runs under the grant "
+                "middleware, and this run carries no identity. Sign in "
+                "(Chapter 5), or use `python -m agent brief` for the "
+                "as-itself run."
+            )
+        if access.has_error():
+            return f"Authorization error: {access.get_error()['message']}"
+        error = access.get_resource_error(settings.directory_key_resource)
+        if error is not None:
+            if error.get("code") == "invalid_target":
                 return (
                     f"Authorization error: Keycard doesn't recognize the resource "
                     f"{settings.directory_key_resource!r}. DIRECTORY_KEY_RESOURCE must "
                     "match the identifier registered in Keycard byte-for-byte."
                 )
-            return f"Authorization error: Keycard refused the credential request ({exc.error})."
-        except OAuthError as exc:
-            return f"Authorization error: could not reach Keycard ({exc})."
+            detail = error.get("description") or error.get("message")
+            return f"Authorization error: Keycard refused the credential request ({detail})."
+        credential = access.access(settings.directory_key_resource).access_token
         return call_mcp(settings.directory_mcp, tool_name, args, credential)
 
     return [search_directory, get_entry]
