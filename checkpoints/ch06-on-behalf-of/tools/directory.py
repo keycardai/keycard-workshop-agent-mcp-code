@@ -38,10 +38,10 @@ def make_directory_tools(settings: Settings) -> list[BaseTool]:
             # Chat runs without the grant middleware until Chapter 5's web.py
             # wires it in; until then this tool has no identity to act under.
             return (
-                "Authorization error: this tool runs under the grant "
-                "middleware, and this run carries no identity. Sign in "
-                "(Chapter 5), or use `python -m agent brief` for the "
-                "as-itself run."
+                "Authorization error: no grant middleware is wired into "
+                "this run, so there is no identity to act under. Chapter 5 "
+                "wires it into chat; `python -m agent brief` already runs "
+                "with it."
             )
         if access.has_error():
             return f"Authorization error: {access.get_error()['message']}"

@@ -140,13 +140,17 @@ def _refusal(reply: str) -> StreamingResponse:
 
 
 def _stream_turn(graph_input, thread_id: str):
-    """One agent run as NDJSON events. The run is checkpointed under
-    thread_id so the grant middleware can pause it; a pause ends the stream
-    with an "interrupt" event and leaves the history untouched until the
-    resumed run finishes.
+    """One agent run as NDJSON events: graph_input is the user's new message,
+    or a resume Command. The run is checkpointed under thread_id so the grant
+    middleware can pause it; a pause ends the stream with an "interrupt"
+    event and leaves the history untouched until the resumed run finishes.
     """
     global messages, panel_view, panel_error, pending_thread
     with chat_lock:
+        # Assembled under the lock: a racing second tab reads the finished
+        # history, not a stale snapshot it would later overwrite.
+        if isinstance(graph_input, HumanMessage):
+            graph_input = {"messages": messages + [graph_input]}
         # Captured before the run: the session can expire between the
         # endpoint's backstop and this generator actually running.
         try:
@@ -243,10 +247,7 @@ def chat(body: ChatRequest) -> StreamingResponse:
     # A new message abandons any paused run: fresh thread, fresh turn.
     pending_thread = None
     return StreamingResponse(
-        _stream_turn(
-            {"messages": messages + [HumanMessage(body.message)]},
-            uuid.uuid4().hex,
-        ),
+        _stream_turn(HumanMessage(body.message), uuid.uuid4().hex),
         media_type="application/x-ndjson",
     )
 
@@ -259,10 +260,12 @@ def chat_resume() -> StreamingResponse:
     """
     if store.claims() is None:
         return _refusal("No one is signed in. Sign in first.")
-    if pending_thread is None:
+    # Captured once: a racing new message clears the global mid-request.
+    thread_id = pending_thread
+    if thread_id is None:
         return _refusal("Nothing is waiting to resume.")
     return StreamingResponse(
-        _stream_turn(Command(resume="granted"), pending_thread),
+        _stream_turn(Command(resume="granted"), thread_id),
         media_type="application/x-ndjson",
     )
 
