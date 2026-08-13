@@ -10,21 +10,18 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, StreamingResponse
-from keycardai.langchain import KeycardIdentity
-from keycardai.oauth import BasicAuth, Client
-from keycardai.oauth.exceptions import OAuthError, OAuthProtocolError
+from keycardai.langchain import KeycardGrantMiddleware, KeycardIdentity
 from langchain_core.messages import AIMessageChunk, BaseMessage, HumanMessage
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
 from pydantic import BaseModel
 
-from .config import MissingConfig, load_settings, require
+from .config import MissingConfig, load_settings
 from .graph import build_agent, make_keycard_middleware
 from .keycard.login import router as keycard_router
 from .keycard.tokens import NotLoggedIn, store
 from .llm import get_llm
 from .tools import get_tools
-from .tools.remote import call_mcp
 from .tools.requests_queue import REQUEST_TOOLS
 
 settings = load_settings()
@@ -85,42 +82,34 @@ def panel_records(
     return records, saw_data
 
 
-def _snapshot_credential() -> str:
-    """A user-subject credential for the seed fetch, minted the same way the
-    middleware mints one per tool call (RFC 8693). The middleware only wraps
-    the agent's tool calls, and this fetch is page plumbing, not a tool call,
-    so it exchanges for itself. Nothing is stored.
-    """
-    with Client(
-        require(settings.keycard_zone_url, "KEYCARD_ZONE_URL"),
-        auth=BasicAuth(
-            require(settings.keycard_client_id, "KEYCARD_CLIENT_ID"),
-            require(settings.keycard_client_secret, "KEYCARD_CLIENT_SECRET"),
-        ),
-    ) as client:
-        response = client.exchange_token(
-            subject_token=store.user_token,
-            resource=settings.requests_mcp,
-        )
-    return response.access_token
+# One middleware for the process, built on first use so a missing setting
+# surfaces as a message where it's noticed, not a crash at import. It holds
+# no identity (that arrives per run via context), and sharing it keeps its
+# per-loop client cache and metadata discovery warm across turns.
+_keycard: KeycardGrantMiddleware | None = None
+
+
+def _middleware() -> KeycardGrantMiddleware:
+    global _keycard
+    if _keycard is None:
+        _keycard = make_keycard_middleware(settings)
+    return _keycard
 
 
 def dashboard_snapshot() -> tuple[list[dict] | None, str | None]:
-    """The dashboard, fetched with the same user-subject credential the
-    agent's tools get from the middleware. None records means the fetch
-    failed, and the second element says why; an authorization failure names
-    its fix, and the page shows that instead of passing an empty dashboard
-    off as the truth.
+    """The dashboard, fetched through the same governed tool the agent uses
+    in chat: grant() serves the tool's access context outside a run, so this
+    page plumbing takes the exact code path (and error wording) tool calls
+    do. None records means the fetch failed, and the second element says why.
     """
     try:
-        credential = _snapshot_credential()
+        keycard = _middleware()
+        identity = KeycardIdentity(subject_token=store.user_token)
     except (MissingConfig, NotLoggedIn) as exc:
         return None, f"Authorization error: {exc}"
-    except OAuthProtocolError as exc:
-        return None, f"Authorization error: Keycard refused the credential request ({exc.error})."
-    except OAuthError as exc:
-        return None, f"Authorization error: could not reach Keycard ({exc})."
-    raw = call_mcp(settings.requests_mcp, "list_requests", {}, credential)
+    lister = next(t for t in tools if t.name == "list_requests")
+    with keycard.grant(identity, tool_name="list_requests"):
+        raw = lister.invoke({})
     try:
         data = json.loads(raw)
     except ValueError:
@@ -168,12 +157,14 @@ def _stream_turn(graph_input, thread_id: str):
             ) + "\n"
             return
         # Assembled per turn: nothing the model holds outlives the request.
+        # The Keycard middleware is the one exception — shared, because it
+        # holds no identity, only warm plumbing (see _middleware).
         try:
             agent = build_agent(
                 get_llm(settings),
                 tools,
                 identity=store.identity() if store.claims() else None,
-                keycard=make_keycard_middleware(settings),
+                keycard=_middleware(),
                 checkpointer=checkpointer,
             )
         except MissingConfig as exc:
@@ -225,6 +216,9 @@ def _stream_turn(graph_input, thread_id: str):
             yield json.dumps(
                 {"interrupt": {
                     "type": interrupt_payload.get("type"),
+                    # Why sign-in is needed: "missing_identity" or
+                    # "subject_token_expired". The page words its card by this.
+                    "reason": interrupt_payload.get("reason"),
                     "message": interrupt_payload.get("message"),
                     "url": interrupt_payload.get("authorization_url")
                     or interrupt_payload.get("sign_in_url"),

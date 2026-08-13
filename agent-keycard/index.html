@@ -712,13 +712,18 @@
     if (interrupt.url) {
       const link = document.createElement("a");
       link.href = interrupt.url;
-      // Sign-in ("/login") round-trips this page; consent happens elsewhere
-      // and the user comes back to press Resume.
-      if (!interrupt.url.startsWith("/")) {
+      // Sign-in round-trips this page; consent happens elsewhere and the
+      // user comes back to press Resume. reason says why sign-in is needed:
+      // a session that expired mid-run reads differently from never having
+      // signed in at all.
+      const signIn = interrupt.type === "sign_in_required";
+      if (!signIn) {
         link.target = "_blank";
         link.rel = "noopener";
       }
-      link.textContent = interrupt.url.startsWith("/") ? "Sign in" : "Grant access";
+      link.textContent = !signIn ? "Grant access"
+        : interrupt.reason === "subject_token_expired" ? "Sign in again"
+        : "Sign in";
       note.append(link, " ");
     }
     const resume = document.createElement("button");
