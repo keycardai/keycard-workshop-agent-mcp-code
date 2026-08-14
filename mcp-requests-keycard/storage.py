@@ -102,7 +102,13 @@ def _call(method: str, path: str, body: dict | None = None) -> dict | list:
         raise DashboardError(f"Could not reach the requests API at {_api_url()}: {exc}") from exc
     if response.status_code == 401:
         challenge = response.headers.get("www-authenticate", "")
-        raise DashboardError(f"The requests API refused the credentials (401). {challenge}")
+        try:
+            detail = response.json().get("detail", "")
+        except ValueError:
+            detail = ""
+        raise DashboardError(
+            f"The requests API refused the credentials (401). {challenge} {detail}".strip()
+        )
     if response.status_code >= 400:
         try:
             detail = response.json().get("detail", response.text)
