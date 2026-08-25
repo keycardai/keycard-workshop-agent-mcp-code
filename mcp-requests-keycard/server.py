@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from keycardai.mcp.server.auth import AccessContext, AuthProvider, ClientSecret
 from keycardai.oauth import Client
 from keycardai.oauth.exceptions import ConfigError, OAuthError
-from mcp.server.auth.middleware.auth_context import get_access_token
+from keycardai.oauth.utils.jwt import get_claims
 from mcp.server.mcpserver import Context, MCPServer
 
 import storage
@@ -81,12 +81,15 @@ def _credential(access: AccessContext) -> str:
     raise DashboardError(f"Token exchange for the requests API failed: {detail}")
 
 
-def _caller(access: AccessContext) -> str:
-    """The caller's stable identity. Zone access tokens are authorization-only
-    (audience + scopes); the user's email lives behind the zone's userinfo
-    endpoint, and it has to: the dashboard's rows carry emails, so ownership
-    checks must compare like for like."""
-    claims = get_access_token().claims or {}
+def _caller(access: AccessContext, ctx: Context) -> str:
+    """The caller's stable identity. The verified delegated token rides on
+    the request (the AuthProvider's backend sets request.user), and zone
+    access tokens are authorization-only (audience + scopes), so the email
+    usually lives behind the zone's userinfo endpoint instead, reached with
+    the userinfo credential the tool's grant minted. The dashboard's rows
+    carry emails, so ownership checks must compare like for like."""
+    user = ctx.request_context.request.user
+    claims = get_claims(user.access_token) if getattr(user, "access_token", None) else {}
     if claims.get("email"):
         return claims["email"]
     try:
@@ -115,7 +118,7 @@ def _forbidden(request_id: str, owner: str, caller: str, action: str) -> dict:
 
 @mcp.tool()
 @auth.grant(API)
-def list_requests(access: AccessContext, ctx: Context) -> list[dict] | dict:
+def list_requests(*, access: AccessContext, ctx: Context) -> list[dict] | dict:
     """List every request on the team dashboard, with requester, assignee,
     priority, and status."""
     try:
@@ -126,7 +129,7 @@ def list_requests(access: AccessContext, ctx: Context) -> list[dict] | dict:
 
 @mcp.tool()
 @auth.grant(API)
-def get_request(request_id: str, access: AccessContext, ctx: Context) -> dict:
+def get_request(request_id: str, *, access: AccessContext, ctx: Context) -> dict:
     """Look up one request by id, e.g. REQ-1042."""
     try:
         return storage.get_request(request_id, _credential(access))
@@ -145,7 +148,7 @@ def create_request(
     try:
         return storage.create_request(
             {"title": title, "priority": priority, "assignee": assignee},
-            identity=_caller(access),
+            identity=_caller(access, ctx),
             credential=_credential(access),
         )
     except DashboardError as exc:
@@ -164,7 +167,7 @@ def update_request_status(
     try:
         credential = _credential(access)
         row = storage.get_request(request_id, credential)
-        caller = _caller(access)
+        caller = _caller(access, ctx)
         if caller not in (row.get("requester"), row.get("assignee")):
             return _forbidden(request_id, row.get("requester", ""), caller, "update")
         return storage.update_request(request_id, {"status": status}, credential)
@@ -184,7 +187,7 @@ def set_request_priority(
     try:
         credential = _credential(access)
         row = storage.get_request(request_id, credential)
-        caller = _caller(access)
+        caller = _caller(access, ctx)
         if row.get("requester") != caller:
             return _forbidden(request_id, row.get("requester", ""), caller, "reprioritize")
         return storage.update_request(request_id, {"priority": priority}, credential)
@@ -199,7 +202,7 @@ def delete_request(request_id: str, *, access: AccessContext, ctx: Context) -> d
     try:
         credential = _credential(access)
         row = storage.get_request(request_id, credential)
-        caller = _caller(access)
+        caller = _caller(access, ctx)
         if row.get("requester") != caller:
             return _forbidden(request_id, row.get("requester", ""), caller, "delete")
         # The marker tells consumers this row is gone, not updated; the
@@ -219,7 +222,7 @@ def reassign_request(
     try:
         credential = _credential(access)
         row = storage.get_request(request_id, credential)
-        caller = _caller(access)
+        caller = _caller(access, ctx)
         if row.get("requester") != caller:
             return _forbidden(request_id, row.get("requester", ""), caller, "reassign")
         return storage.update_request(request_id, {"assignee": assignee}, credential)

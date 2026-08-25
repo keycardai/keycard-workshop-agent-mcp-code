@@ -15,7 +15,7 @@ import secrets
 from fastapi import APIRouter, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from keycardai.oauth import BasicAuth, Client, build_authorize_url
-from keycardai.oauth.exceptions import OAuthError
+from keycardai.oauth.exceptions import ConfigError, OAuthError
 from keycardai.oauth.utils.pkce import PKCEGenerator
 
 from ..config import MissingConfig, load_settings, require
@@ -124,7 +124,7 @@ def logout() -> Response:
     try:
         with Client(settings.keycard_zone_url) as client:
             end_session = client.discover_server_metadata().end_session_endpoint
-    except OAuthError:
+    except (OAuthError, ConfigError):
         end_session = None
     if not end_session:
         # The agent side is signed out regardless; without the zone's logout
