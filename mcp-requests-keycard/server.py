@@ -9,87 +9,98 @@ and only the requester may change its priority, delete it, or reassign it.
 import os
 from pathlib import Path
 
-import httpx
+import uvicorn
 from dotenv import load_dotenv
-from fastmcp import FastMCP
-from fastmcp.server.dependencies import get_access_token
-from keycardai.fastmcp import AuthProvider
-from keycardai.oauth import BasicAuth, Client
-from keycardai.oauth.exceptions import OAuthError
+from keycardai.mcp.server.auth import AccessContext, AuthProvider, ClientSecret
+from keycardai.oauth import Client
+from keycardai.oauth.exceptions import ConfigError, OAuthError
+from mcp.server.auth.middleware.auth_context import get_access_token
+from mcp.server.mcpserver import Context, MCPServer
 
 import storage
-from storage import DashboardError, _require
+from storage import DashboardError, _authorization_needed
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
 STATUSES = ("open", "in_progress", "done")
 
-ZONE_URL = os.environ.get("KEYCARD_ZONE_URL", "").strip().rstrip("/")
-if not ZONE_URL:
-    raise SystemExit("KEYCARD_ZONE_URL is not set; copy mcp-requests/.env.example to .env")
 
-# The audience is this server's URL + /mcp and must match the resource
-# registered in Keycard byte-for-byte.
+def _env(name: str) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise SystemExit(f"{name} is not set; copy mcp-requests/.env.example to .env")
+    return value
+
+
+ZONE_URL = _env("KEYCARD_ZONE_URL").rstrip("/")
+
+# The resource this server exchanges the caller's token for; must match the
+# identifier registered in Keycard byte-for-byte.
+API = _env("REQUESTS_API_RESOURCE")
+
+# The zone's userinfo endpoint doubles as a registered resource: granting it
+# mints a credential that endpoint accepts, user-as-subject like every other
+# exchange. Discovered once at boot; the server can't verify tokens without
+# the zone anyway.
+try:
+    with Client(ZONE_URL) as _client:
+        _metadata = _client.discover_server_metadata()
+except OAuthError as exc:
+    raise SystemExit(f"Could not reach Keycard at {ZONE_URL} ({exc})") from exc
+USERINFO = _metadata.userinfo_endpoint
+if not USERINFO:
+    raise SystemExit(f"{ZONE_URL} publishes no userinfo_endpoint; check KEYCARD_ZONE_URL")
+
+# One AuthProvider does both jobs: it verifies the delegated token on the way
+# in (the audience is this server's URL + /mcp), and it holds the server's own
+# credential for the exchanges each tool's grant() declares.
 auth = AuthProvider(
     zone_url=ZONE_URL,
     mcp_server_name="Requests MCP Server",
     mcp_server_url="http://localhost:8300",
+    application_credential=ClientSecret(
+        (_env("REQUESTS_MCP_CLIENT_ID"), _env("REQUESTS_MCP_CLIENT_SECRET"))
+    ),
 )
-mcp = FastMCP("Requests MCP Server", auth=auth.get_remote_auth_provider())
+mcp = MCPServer("Requests MCP Server")
 
 
-def _caller() -> str:
+def _credential(access: AccessContext) -> str:
+    """The minted requests-API credential, or the failure in plain words.
+    The grant already ran before the tool did; failures are recorded on the
+    AccessContext, never raised, so the tool decides how to say them.
+    """
+    error = access.get_error() or access.get_resource_error(API)
+    if error is None:
+        return access.access(API).access_token
+    if error.get("code") in ("insufficient_authorization", "consent_required"):
+        # A missing user grant is the one failure the caller can fix
+        # themselves; every other refusal stays a plain relay.
+        raise DashboardError(_authorization_needed())
+    detail = error.get("description") or error.get("message") or error.get("code")
+    raise DashboardError(f"Token exchange for the requests API failed: {detail}")
+
+
+def _caller(access: AccessContext) -> str:
     """The caller's stable identity. Zone access tokens are authorization-only
     (audience + scopes); the user's email lives behind the zone's userinfo
     endpoint, and it has to: the dashboard's rows carry emails, so ownership
     checks must compare like for like."""
     claims = get_access_token().claims or {}
-    email = claims.get("email")
-    if not email:
-        try:
-            email = _userinfo().get("email")
-        except DashboardError:
-            # Identity degrades to the sub rather than failing the whole call.
-            email = None
-    return email or claims.get("sub") or "unknown"
-
-
-# The endpoint location is configuration and safe to cache; the answer is
-# authorization data and never is.
-_userinfo_endpoint: str | None = None
-
-
-def _userinfo() -> dict:
-    """Identity claims from the zone's userinfo endpoint. Userinfo answers
-    only tokens minted for it, so the server first exchanges the delegated
-    token it received for a userinfo credential (RFC 8693), the same
-    per-call, user-as-subject exchange storage.py runs for the requests API.
-    The endpoint URL doubles as the registered resource identifier."""
-    global _userinfo_endpoint
+    if claims.get("email"):
+        return claims["email"]
     try:
-        if _userinfo_endpoint is None:
-            metadata = httpx.get(f"{ZONE_URL}/.well-known/openid-configuration").json()
-            _userinfo_endpoint = metadata["userinfo_endpoint"]
-        with Client(
-            ZONE_URL,
-            auth=BasicAuth(
-                _require("REQUESTS_MCP_CLIENT_ID"),
-                _require("REQUESTS_MCP_CLIENT_SECRET"),
-            ),
-        ) as client:
-            minted = client.exchange_token(
-                subject_token=get_access_token().token,
-                resource=_userinfo_endpoint,
-                scope="openid email",
-            )
-        response = httpx.get(
-            _userinfo_endpoint,
-            headers={"Authorization": f"Bearer {minted.access_token}"},
-        )
-        response.raise_for_status()
-        return response.json()
-    except (httpx.HTTPError, OAuthError, KeyError, ValueError) as exc:
-        raise DashboardError(f"Could not fetch your identity from the zone: {exc}") from exc
+        if access.get_resource_error(USERINFO) is None:
+            with Client(ZONE_URL) as client:
+                info = client.userinfo(
+                    access.access(USERINFO).access_token, metadata=_metadata
+                )
+            if info.claims.get("email"):
+                return info.claims["email"]
+    except (OAuthError, ConfigError):
+        # Identity degrades to the sub rather than failing the whole call.
+        pass
+    return claims.get("sub") or "unknown"
 
 
 def _forbidden(request_id: str, owner: str, caller: str, action: str) -> dict:
@@ -102,98 +113,119 @@ def _forbidden(request_id: str, owner: str, caller: str, action: str) -> dict:
     }
 
 
-@mcp.tool
-def list_requests() -> list[dict] | dict:
+@mcp.tool()
+@auth.grant(API)
+def list_requests(access: AccessContext, ctx: Context) -> list[dict] | dict:
     """List every request on the team dashboard, with requester, assignee,
     priority, and status."""
     try:
-        return storage.list_requests()
+        return storage.list_requests(_credential(access))
     except DashboardError as exc:
         return {"error": "dashboard_error", "detail": str(exc)}
 
 
-@mcp.tool
-def get_request(request_id: str) -> dict:
+@mcp.tool()
+@auth.grant(API)
+def get_request(request_id: str, access: AccessContext, ctx: Context) -> dict:
     """Look up one request by id, e.g. REQ-1042."""
     try:
-        return storage.get_request(request_id)
+        return storage.get_request(request_id, _credential(access))
     except DashboardError as exc:
         return {"error": "dashboard_error", "detail": str(exc)}
 
 
-@mcp.tool
-def create_request(title: str, priority: str = "normal", assignee: str = "") -> dict:
+@mcp.tool()
+@auth.grant([API, USERINFO])
+def create_request(
+    title: str, priority: str = "normal", assignee: str = "",
+    *, access: AccessContext, ctx: Context,
+) -> dict:
     """File a new request on the dashboard. Priority is low, normal, or high;
     assignee is an email address."""
     try:
         return storage.create_request(
             {"title": title, "priority": priority, "assignee": assignee},
-            identity=_caller(),
+            identity=_caller(access),
+            credential=_credential(access),
         )
     except DashboardError as exc:
         return {"error": "dashboard_error", "detail": str(exc)}
 
 
-@mcp.tool
-def update_request_status(request_id: str, status: str) -> dict:
+@mcp.tool()
+@auth.grant([API, USERINFO])
+def update_request_status(
+    request_id: str, status: str, *, access: AccessContext, ctx: Context
+) -> dict:
     """Move a request to a new status: open, in_progress, or done. Only the
     requester or the current assignee may do this."""
     if status not in STATUSES:
         return {"error": "invalid_status", "detail": f"status must be one of: {', '.join(STATUSES)}"}
     try:
-        row = storage.get_request(request_id)
-        caller = _caller()
+        credential = _credential(access)
+        row = storage.get_request(request_id, credential)
+        caller = _caller(access)
         if caller not in (row.get("requester"), row.get("assignee")):
             return _forbidden(request_id, row.get("requester", ""), caller, "update")
-        return storage.update_request(request_id, {"status": status})
+        return storage.update_request(request_id, {"status": status}, credential)
     except DashboardError as exc:
         return {"error": "dashboard_error", "detail": str(exc)}
 
 
-@mcp.tool
-def set_request_priority(request_id: str, priority: str) -> dict:
+@mcp.tool()
+@auth.grant([API, USERINFO])
+def set_request_priority(
+    request_id: str, priority: str, *, access: AccessContext, ctx: Context
+) -> dict:
     """Change a request's priority: low, normal, or high. Only the requester
     may change it."""
     if priority not in ("low", "normal", "high"):
         return {"error": "invalid_priority", "detail": "priority must be one of: low, normal, high"}
     try:
-        row = storage.get_request(request_id)
-        caller = _caller()
+        credential = _credential(access)
+        row = storage.get_request(request_id, credential)
+        caller = _caller(access)
         if row.get("requester") != caller:
             return _forbidden(request_id, row.get("requester", ""), caller, "reprioritize")
-        return storage.update_request(request_id, {"priority": priority})
+        return storage.update_request(request_id, {"priority": priority}, credential)
     except DashboardError as exc:
         return {"error": "dashboard_error", "detail": str(exc)}
 
 
-@mcp.tool
-def delete_request(request_id: str) -> dict:
+@mcp.tool()
+@auth.grant([API, USERINFO])
+def delete_request(request_id: str, *, access: AccessContext, ctx: Context) -> dict:
     """Delete a request from the dashboard. Only the requester may delete it."""
     try:
-        row = storage.get_request(request_id)
-        caller = _caller()
+        credential = _credential(access)
+        row = storage.get_request(request_id, credential)
+        caller = _caller(access)
         if row.get("requester") != caller:
             return _forbidden(request_id, row.get("requester", ""), caller, "delete")
         # The marker tells consumers this row is gone, not updated; the
         # agent's panel drops it instead of folding it back in.
-        return {**storage.delete_request(request_id), "deleted": True}
+        return {**storage.delete_request(request_id, credential), "deleted": True}
     except DashboardError as exc:
         return {"error": "dashboard_error", "detail": str(exc)}
 
 
-@mcp.tool
-def reassign_request(request_id: str, assignee: str) -> dict:
+@mcp.tool()
+@auth.grant([API, USERINFO])
+def reassign_request(
+    request_id: str, assignee: str, *, access: AccessContext, ctx: Context
+) -> dict:
     """Reassign a request to someone else. Assignee is an email address.
     Only the requester may reassign it."""
     try:
-        row = storage.get_request(request_id)
-        caller = _caller()
+        credential = _credential(access)
+        row = storage.get_request(request_id, credential)
+        caller = _caller(access)
         if row.get("requester") != caller:
             return _forbidden(request_id, row.get("requester", ""), caller, "reassign")
-        return storage.update_request(request_id, {"assignee": assignee})
+        return storage.update_request(request_id, {"assignee": assignee}, credential)
     except DashboardError as exc:
         return {"error": "dashboard_error", "detail": str(exc)}
 
 
 if __name__ == "__main__":
-    mcp.run(transport="http", host="127.0.0.1", port=8300)
+    uvicorn.run(auth.app(mcp), host="127.0.0.1", port=8300, log_level="warning")

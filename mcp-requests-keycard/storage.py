@@ -10,9 +10,6 @@ import threading
 from urllib.parse import quote, urlencode
 
 import httpx
-from fastmcp.server.dependencies import get_access_token
-from keycardai.oauth import BasicAuth, Client
-from keycardai.oauth.exceptions import OAuthError, OAuthProtocolError
 
 
 class DashboardError(Exception):
@@ -61,42 +58,21 @@ def _authorization_needed() -> str:
     )
 
 
-def _headers() -> dict:
-    # Continue the caller's delegation chain: exchange the token this server
-    # received for one minted for the requests API. The user stays the subject;
-    # the credential is issued per call and never stored.
-    subject = get_access_token()
-    try:
-        with Client(
-            _require("KEYCARD_ZONE_URL"),
-            auth=BasicAuth(
-                _require("REQUESTS_MCP_CLIENT_ID"),
-                _require("REQUESTS_MCP_CLIENT_SECRET"),
-            ),
-        ) as client:
-            response = client.exchange_token(
-                subject_token=subject.token,
-                resource=_require("REQUESTS_API_RESOURCE"),
-            )
-    except OAuthProtocolError as exc:
-        # A missing user grant is the one failure the caller can fix
-        # themselves; every other refusal stays a plain relay.
-        if exc.error in ("insufficient_authorization", "consent_required"):
-            raise DashboardError(_authorization_needed()) from exc
-        raise DashboardError(f"Token exchange for the requests API failed: {exc}") from exc
-    except OAuthError as exc:
-        raise DashboardError(f"Token exchange for the requests API failed: {exc}") from exc
-    return {"Authorization": f"Bearer {response.access_token}"}
+def _headers(credential: str | None) -> dict:
+    # The caller's delegation chain continues here: the grant on each tool
+    # already exchanged the user's token for this per-call credential, so
+    # storage only has to present it. Nothing is stored.
+    return {"Authorization": f"Bearer {credential}"} if credential else {}
 
 
 def _api_url() -> str:
     return os.environ.get("REQUESTS_API_URL", "").strip().rstrip("/")
 
 
-def _call(method: str, path: str, body: dict | None = None) -> dict | list:
+def _call(method: str, path: str, credential: str | None, body: dict | None = None) -> dict | list:
     try:
         response = httpx.request(
-            method, f"{_api_url()}{path}", json=body, headers=_headers(), timeout=15
+            method, f"{_api_url()}{path}", json=body, headers=_headers(credential), timeout=15
         )
     except httpx.HTTPError as exc:
         raise DashboardError(f"Could not reach the requests API at {_api_url()}: {exc}") from exc
@@ -150,38 +126,38 @@ def _local_find(request_id: str) -> dict:
     raise DashboardError(f"{request_id} does not exist (already deleted?).")
 
 
-def list_requests() -> list[dict]:
+def list_requests(credential: str | None = None) -> list[dict]:
     if _api_url():
-        return _call("GET", "/requests")
+        return _call("GET", "/requests", credential)
     with _local_lock:
         return [dict(row) for row in _local]
 
 
-def get_request(request_id: str) -> dict:
+def get_request(request_id: str, credential: str | None = None) -> dict:
     if _api_url():
-        return _call("GET", f"/requests/{request_id}")
+        return _call("GET", f"/requests/{request_id}", credential)
     with _local_lock:
         return dict(_local_find(request_id))
 
 
-def create_request(fields: dict, identity: str | None = None) -> dict:
+def create_request(fields: dict, identity: str | None = None, credential: str | None = None) -> dict:
     if _api_url():
-        return _call("POST", "/requests", body=fields)
+        return _call("POST", "/requests", credential, body=fields)
     return _local_create(fields, identity)
 
 
-def update_request(request_id: str, fields: dict) -> dict:
+def update_request(request_id: str, fields: dict, credential: str | None = None) -> dict:
     if _api_url():
-        return _call("PATCH", f"/requests/{request_id}", body=fields)
+        return _call("PATCH", f"/requests/{request_id}", credential, body=fields)
     with _local_lock:
         row = _local_find(request_id)
         row.update({k: v for k, v in fields.items() if v is not None})
         return dict(row)
 
 
-def delete_request(request_id: str) -> dict:
+def delete_request(request_id: str, credential: str | None = None) -> dict:
     if _api_url():
-        return _call("DELETE", f"/requests/{request_id}")
+        return _call("DELETE", f"/requests/{request_id}", credential)
     with _local_lock:
         row = _local_find(request_id)
         _local.remove(row)
