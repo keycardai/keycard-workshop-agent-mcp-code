@@ -56,7 +56,7 @@ def call_mcp(url: str, tool_name: str, args: dict, credential: str | None = None
         if refused is not None:
             return f"The MCP server at {url} returned {refused}."
         for leaf in leaves:
-            if type(leaf).__module__.partition(".")[0] in ("httpx", "httpx2", "httpcore", "httpcore2"):
+            if type(leaf).__module__.partition(".")[0] in ("httpx2", "httpcore2"):
                 return f"Could not reach the MCP server at {url}: {leaf}"
         for leaf in leaves:
             if isinstance(leaf, MCPError):
