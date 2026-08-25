@@ -63,6 +63,37 @@ everything the chapters edit: `agent-keycard/` for the agent and
 
 ---
 
+## Know who you're guiding
+
+Every attendee registers name-specific values in Keycard, and the guide site
+personalizes its placeholders once they enter their first and last name in
+the "Personalize the workshop guide" box (chapters 0, 3, 7, and 8). The
+console entries, `agent/.env`, the docs, and your guidance must all carry one
+spelling, byte-for-byte. Establish the name before you reference any
+name-specific value:
+
+- If `AGENT_RESOURCE` is set in `agent/.env`, it is ground truth:
+  `urn:keycard-workshop:agent:resource:<slug>` carries the slug they
+  registered in Chapter 3. Read the slug from there and confirm the display
+  name once ("that makes you Kim Maida, yes?").
+- Otherwise, ask upfront for their **first and last name**, and have them
+  enter the exact same name in the guide's personalization box if they
+  haven't already, so the values you give them and the values the docs and
+  copy buttons give them never diverge.
+
+Derive values with the same rules the docs use. Slug: transliterate accented
+letters to their base letter (NFKD: strip the combining marks), lowercase,
+and drop every remaining character that is not a-z or 0-9 ("Kim Maida"
+becomes `kimmaida`; "José García" becomes `josegarcia`). Display names keep
+the name as typed ("Agent Resource - Kim Maida"). Where the docs show
+`<yourname>`, use the slug; where they show `<Your name>`, use the typed
+name. A name mismatch between the console
+registration and `.env` shows up later as `invalid_target` or a Chapter 5
+sign-in failure, so when you find a typo, fix it at whichever source was
+registered first and bring everything else in line with it.
+
+---
+
 ## Capability 1: Orient ("where am I?")
 
 Run this first whenever a build is requested. Read the signals together and
@@ -76,7 +107,7 @@ Start with the working tree:
 
 | Working-tree signal | Code is at the end of |
 |---|---|
-| `TODO(ch02)` in `mcp-requests/server.py` and `storage.py`; no `from keycardai.fastmcp import AuthProvider` import on the server | Chapter 0 or 1 (the tour leaves no code trace; Chapter 2 not started) |
+| `TODO(ch02)` in `mcp-requests/server.py` and `storage.py`; no `from keycardai.mcp.server.auth import AuthProvider` import on the server | Chapter 0 or 1 (the tour leaves no code trace; Chapter 2 not started) |
 | `mcp-requests/server.py` protected with `AuthProvider`, and `storage.py`'s `_headers` exchanges the caller's token (no `TODO(ch02)`); `TODO(ch04)` still in `agent/tools/directory.py` | Chapter 2 or Chapter 3 (Chapter 3 is console + `.env` only; use the `.env` tie-breakers to split them) |
 | `get_access_context` in `agent/tools/directory.py` reading the grant middleware's vault-key credential (no `TODO(ch04)`); `TODO(ch05)` still in `agent/web.py` and no `agent/keycard/` | Chapter 4 |
 | `agent/keycard/login.py` exists and `agent/web.py` has no `TODO(ch05)` (it wires `KeycardGrantMiddleware` and serves `/chat/resume`); `TODO(ch06)` still in `agent/tools/requests_queue.py` | Chapter 5 |
@@ -139,7 +170,7 @@ follows the same shape:
 | 0 | setup | Two processes, two shared keys, no individuals: the directory answers anyone holding the shared guest key, and the whole cohort reads, writes, and deletes each other's requests as `api-key`. | A request of their own invention ("File a <priority> request to <anything>"; never hand them one to copy), then "delete <a random REQ-id they did not file>", then "what are the request dashboard's access rules right now?" | The shared dashboard fills with `api-key` rows; deleting someone else's ticket works; races land as "already deleted", which is expected. | "Who does the dashboard think did all of this, and what would an audit find?" |
 | 1 | console | Tour what instructors pre-registered: the "Requests MCP Resource" and "Requests API" resources, the "Directory MCP key" vault resource, the "Requests MCP Actor" application, the providers, the people, and the default policies. Nothing is enforced on their running processes yet. | n/a (a console walk; you cannot see it, so have them narrate each stop). | They can find each sidebar section, point at the two-hop requests chain, and trace the Actor's provides-and-depends wiring; Sessions and Grants under their own name are empty. | "The requests MCP server is both a resource and an application: why does it appear in both lists?" |
 | 2 | code | Protect the requests MCP server AND replace its downstream API key with a per-call token exchange that carries the caller's identity, on the provides-and-depends wiring from the tour. | After the edits: restart the requests MCP server, then ask the agent a dashboard question. | The server refuses anonymous calls, `storage.py` holds no API key, the agent's dashboard tools return authorization errors (expected until Chapter 6), and directory still works. The instructor connects a stock MCP client and works the dashboard as a named person; **People** → (person) → **Grants** shows the delegated grant for the requests API afterward. | "Whose credentials perform the downstream exchange, and who stays the subject?" |
-| 3 | console + config | Register your own pair: the resource "Agent Resource - <Name>", then the application "Agent App - <Name>" that provides it, issue its credentials, wire them into `agent/.env`, and prove the connection with the preflight. That provides line is what will make Chapter 6's exchange legal. | `python -m agent check` | All five PASS lines. In the console: the app carries redirect `http://localhost:8484/callback`, consent Required, provides their resource, and depends on three: their own resource, "Directory MCP key", and "Requests MCP Resource". Pickers show display names only, so the naming convention is how they find theirs. `AGENT_RESOURCE`, `KEYCARD_ZONE_URL`, `KEYCARD_CLIENT_ID`, and `KEYCARD_CLIENT_SECRET` land in `agent/.env`. | "Provide what you host, depend on what you request tokens for: why is your own resource on both lines?" |
+| 3 | console + config | Register your own pair: the resource "Agent Resource - <Your name>", then the application "Agent App - <Your name>" that provides it, issue its credentials, wire them into `agent/.env`, and prove the connection with the preflight. That provides line is what will make Chapter 6's exchange legal. | `python -m agent check` | All five PASS lines. In the console: the app carries redirect `http://localhost:8484/callback`, consent Required, provides their resource, and depends on three: their own resource, "Directory MCP key", and "Requests MCP Resource". Pickers show display names only, so the naming convention is how they find theirs. `AGENT_RESOURCE`, `KEYCARD_ZONE_URL`, `KEYCARD_CLIENT_ID`, and `KEYCARD_CLIENT_SECRET` land in `agent/.env`. | "Provide what you host, depend on what you request tokens for: why is your own resource on both lines?" |
 | 4 | code | The agent retires the shared guest key and fetches the directory's vault key as itself, per call: a client credentials grant, no user. | A directory question, before and after the edit. | Answers look identical (the vault key actually shows a little more); the audit log now carries one application-only issuance on the vault key per call, and `DIRECTORY_KEY` is gone from `.env`. | "There is no user in this chain. Why is that correct here and wrong for the dashboard?" |
 | 5 | code | Sign in as yourself; the agent holds proof of who is driving, audienced to your own agent resource. | Click Sign in, approve the consent screen. | Header shows email and groups; consent named the dependency closure: their agent resource, the vault key, and the requests MCP resource. The request queue panel still reports the dashboard failure from Chapter 2 (expected until Chapter 6). | "Only the app that provides a token's audience may exchange it onward: which Chapter 3 line made your app that provider?" |
 | 6 | code | Per-call exchange as the signed-in user. The first dashboard call hits the consent horizon and fails; the authorizer page records the missing grant and the chain heals. Then ownership rules light up. | Sign in, ask for the dashboard (first call fails with an authorizer link, expected). Authorize at the page, retry. Then: file a request in their own words; delete a neighbor's (refused, names the owner); delete your own (works); reassign your own to a neighbor (works); reassign a neighbor's (refused, names the owner). | The first call raises the authorizer banner; after authorizing, real data flows and the banner clears. Panel rows carry real names; a neighbor's delete or reassign is refused by name while their own goes through. | "Whose identity does the reassignment write carry, and why does the same move on a neighbor's request get refused?" |
