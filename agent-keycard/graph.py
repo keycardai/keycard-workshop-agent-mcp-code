@@ -75,6 +75,21 @@ def make_keycard_middleware(settings: Settings) -> KeycardGrantMiddleware:
     )
 
 
+# The process's one middleware instance, built on first use so a missing
+# setting surfaces as a message where it's noticed, not a crash at import.
+# One per process is load-bearing: the instance owns a background event loop
+# and a warm client cache that nothing ever stops, so building it per request
+# would leak a thread per turn. It holds no identity; that arrives per run.
+_keycard: KeycardGrantMiddleware | None = None
+
+
+def shared_middleware(settings: Settings) -> KeycardGrantMiddleware:
+    global _keycard
+    if _keycard is None:
+        _keycard = make_keycard_middleware(settings)
+    return _keycard
+
+
 def build_agent(
     llm: BaseChatModel,
     tools: list[BaseTool],

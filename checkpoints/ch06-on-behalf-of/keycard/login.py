@@ -2,14 +2,16 @@
 
 The agent's web app owns the registered redirect URI: GET /login sends the
 browser to Keycard, GET /callback receives the code and redeems it. Built
-from the SDK's flow pieces instead of `keycardai.oauth.pkce.authenticate`,
-which runs its own one-shot callback server; this app already is one.
+from the SDK's flow pieces: `keycardai.oauth.pkce.authenticate` runs its own
+one-shot callback server (this app already is one), and the web-app pair in
+`keycardai.oauth.pkce.web` takes a single RFC 8707 resource, while /login
+below must name two (the agent resource for audience, the requests MCP for
+consent).
 """
 
 import html
 import secrets
 
-import httpx
 from fastapi import APIRouter, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from keycardai.oauth import BasicAuth, Client, build_authorize_url
@@ -120,12 +122,11 @@ def logout() -> Response:
     store.clear()
     settings = load_settings()
     try:
-        metadata = httpx.get(
-            f"{settings.keycard_zone_url}/.well-known/openid-configuration",
-            timeout=10,
-        ).json()
-        end_session = metadata["end_session_endpoint"]
-    except (httpx.HTTPError, KeyError, ValueError):
+        with Client(settings.keycard_zone_url) as client:
+            end_session = client.discover_server_metadata().end_session_endpoint
+    except OAuthError:
+        end_session = None
+    if not end_session:
         # The agent side is signed out regardless; without the zone's logout
         # endpoint the browser keeps its zone session, so the next sign-in
         # may skip the login screen. Landing home keeps that failure soft.

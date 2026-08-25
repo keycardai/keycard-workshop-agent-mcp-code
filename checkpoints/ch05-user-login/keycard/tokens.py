@@ -1,6 +1,7 @@
 import time
 
-import httpx
+from keycardai.oauth import Client
+from keycardai.oauth.exceptions import ConfigError, OAuthError
 from keycardai.oauth.utils.jwt import get_claims
 
 from ..config import load_settings
@@ -62,22 +63,13 @@ class TokenStore:
             return self._userinfo[1]
         settings = load_settings()
         try:
-            metadata = httpx.get(
-                f"{settings.keycard_zone_url}/.well-known/openid-configuration",
-                timeout=10,
-            ).json()
-            response = httpx.get(
-                metadata["userinfo_endpoint"],
-                headers={"Authorization": f"Bearer {token}"},
-                timeout=10,
-            )
-            response.raise_for_status()
-        except (httpx.HTTPError, KeyError, ValueError):
+            with Client(settings.keycard_zone_url) as client:
+                response = client.userinfo(token)
+        except (OAuthError, ConfigError):
             # Identity display degrades to the sub; nothing else breaks.
             return {}
-        claims = response.json()
-        self._userinfo = (token, claims)
-        return claims
+        self._userinfo = (token, response.claims)
+        return response.claims
 
     def identity(self) -> str:
         claims = self.claims() or {}

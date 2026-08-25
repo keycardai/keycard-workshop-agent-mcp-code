@@ -17,7 +17,7 @@ from langgraph.types import Command
 from pydantic import BaseModel
 
 from .config import MissingConfig, load_settings
-from .graph import build_agent, make_keycard_middleware
+from .graph import build_agent, shared_middleware
 from .keycard.login import router as keycard_router
 from .keycard.tokens import NotLoggedIn, store
 from .llm import get_llm
@@ -82,18 +82,12 @@ def panel_records(
     return records, saw_data
 
 
-# One middleware for the process, built on first use so a missing setting
-# surfaces as a message where it's noticed, not a crash at import. It holds
-# no identity (that arrives per run via context), and sharing it keeps its
-# per-loop client cache and metadata discovery warm across turns.
-_keycard: KeycardGrantMiddleware | None = None
-
-
+# One middleware for the process (graph.shared_middleware): it holds no
+# identity (that arrives per run via context), and sharing it keeps its
+# per-loop client cache and metadata discovery warm across turns. llm.py's
+# vault fetch grants through the same instance.
 def _middleware() -> KeycardGrantMiddleware:
-    global _keycard
-    if _keycard is None:
-        _keycard = make_keycard_middleware(settings)
-    return _keycard
+    return shared_middleware(settings)
 
 
 def dashboard_snapshot() -> tuple[list[dict] | None, str | None]:

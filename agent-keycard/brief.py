@@ -13,7 +13,7 @@ from keycardai.langchain import KeycardIdentity
 from langchain_core.messages import HumanMessage
 
 from .config import MissingConfig, load_settings
-from .graph import build_agent, make_keycard_middleware
+from .graph import build_agent, shared_middleware
 from .llm import get_llm
 from .tools.directory import make_directory_tools
 
@@ -31,7 +31,7 @@ def main() -> int:
         agent = build_agent(
             get_llm(settings),
             make_directory_tools(settings),
-            keycard=make_keycard_middleware(settings),
+            keycard=shared_middleware(settings),
         )
     except MissingConfig as exc:
         print(f"Configuration error: {exc}")
