@@ -41,15 +41,13 @@ def _check_discovery(settings: Settings) -> None:
 
 
 def _check_credentials(settings: Settings) -> None:
-    # Presence only; the credentials are proven on the first tool call,
-    # when the grant middleware exchanges them for a resource token.
+    # Presence only; the first tool call proves them.
     require(settings.keycard_client_id, "KEYCARD_CLIENT_ID")
     require(settings.keycard_client_secret, "KEYCARD_CLIENT_SECRET")
 
 
 def _check_directory(settings: Settings) -> None:
-    # Any HTTP answer proves the server is up; a 401 just means it is
-    # already protected, which later chapters expect.
+    # Any HTTP answer proves the server is up; a 401 means it's already protected.
     httpx.get(settings.directory_mcp)
 
 

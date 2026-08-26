@@ -1,9 +1,8 @@
 """Tools for the directory MCP server.
 
 The directory is hosted for the whole workshop and holds org data, not user
-data. The starter authenticates the way too many internal services do: with
-a shared key from a file, the same one everyone in the workshop has. Compare
-tools/requests_queue.py, where a user is in the chain.
+data. Compare tools/requests_queue.py, where every call goes out on the
+signed-in user's behalf.
 """
 
 from langchain_core.tools import BaseTool, tool
@@ -27,9 +26,9 @@ def make_directory_tools(settings: Settings) -> list[BaseTool]:
         return _call("get_entry", {"entry_id": entry_id})
 
     def _call(tool_name: str, args: dict) -> str:
-        # TODO(ch04): a shared key from .env is the whole authentication story
-        # here. Chapter 4 replaces it with the key the agent fetches from the
-        # Keycard vault with its own identity, per call.
+        # TODO(ch04): the whole authentication story is a shared key from
+        # .env. Chapter 4 replaces it with a key the agent fetches from the
+        # Keycard vault under its own identity, per call.
         return call_mcp(settings.directory_mcp, tool_name, args, settings.directory_key)
 
     return [search_directory, get_entry]

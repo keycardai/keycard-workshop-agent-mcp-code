@@ -2,11 +2,8 @@
 
 The agent's web app owns the registered redirect URI: GET /login sends the
 browser to Keycard, GET /callback receives the code and redeems it. Built
-from the SDK's flow pieces: `keycardai.oauth.pkce.authenticate` runs its own
-one-shot callback server (this app already is one), and the web-app pair in
-`keycardai.oauth.pkce.web` takes a single RFC 8707 resource, while /login
-below must name two (the agent resource for audience, the requests MCP for
-consent).
+from the SDK's flow pieces rather than its ready-made flows, which run their
+own callback server or take a single RFC 8707 resource; /login must name two.
 """
 
 import html
@@ -36,14 +33,11 @@ def login() -> Response:
         client_id = require(settings.keycard_client_id, "KEYCARD_CLIENT_ID")
         client_secret = require(settings.keycard_client_secret, "KEYCARD_CLIENT_SECRET")
         issuer = require(settings.keycard_zone_url, "KEYCARD_ZONE_URL")
-        # The agent resource must be requested explicitly during authorization
-        # AND code exchange (RFC 8707); it becomes the token's audience, and
-        # only the app that provides that audience may exchange the token
-        # onward, which Chapter 6 does. The requests MCP resource rides along
-        # for consent only: naming it makes the consent screen ask again
-        # whenever consent is missing, instead of trusting the zone to
-        # notice a dependency change. The token stays audienced to the agent
-        # resource alone; the code exchange below names only that.
+        # The agent resource must be named during authorization AND code
+        # exchange (RFC 8707): it becomes the token's audience, and only the
+        # app providing that audience may exchange the token onward. The
+        # requests MCP resource rides along for consent only; the token stays
+        # audienced to the agent resource alone.
         resource = require(settings.agent_resource, "AGENT_RESOURCE")
         requests_mcp = require(settings.requests_mcp, "REQUESTS_MCP")
     except MissingConfig as exc:
@@ -78,12 +72,10 @@ def callback(
 ) -> Response:
     global _pending
     if error:
-        # Some denials render an error page on Keycard instead; those never
-        # reach this route, and the message stays in the browser tab.
         return _error_page(f"Keycard returned an error: {error_description or error}")
     if _pending is None or state != _pending["state"]:
-        # State proves this callback answers a sign-in this agent started.
-        # Replays land here too: a finished attempt leaves no pending state.
+        # State proves this callback answers a sign-in this agent started;
+        # replays land here too, since a finished attempt leaves no pending state.
         return _error_page(
             "This sign-in didn't start from this agent (state mismatch). "
             "Go back to the chat page and sign in again."
@@ -115,9 +107,7 @@ def callback(
 @router.get("/logout")
 def logout() -> Response:
     """Sign out fully: drop the agent's token, then end the zone session in
-    the browser. Both halves matter: the zone session is what lets the next
-    sign-in skip the login (and any consent screen); ending it makes the next
-    sign-in run the whole flow from the top.
+    the browser, so the next sign-in runs the whole flow from the top.
     """
     store.clear()
     settings = load_settings()
@@ -127,9 +117,8 @@ def logout() -> Response:
     except (OAuthError, ConfigError):
         end_session = None
     if not end_session:
-        # The agent side is signed out regardless; without the zone's logout
-        # endpoint the browser keeps its zone session, so the next sign-in
-        # may skip the login screen. Landing home keeps that failure soft.
+        # The agent side is signed out regardless; the browser keeps its zone
+        # session, so the next sign-in may skip the login screen.
         return RedirectResponse("/", status_code=303)
     return RedirectResponse(end_session)
 

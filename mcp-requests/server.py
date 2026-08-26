@@ -78,8 +78,7 @@ def set_request_priority(request_id: str, priority: str) -> dict:
 def delete_request(request_id: str) -> dict:
     """Delete a request from the dashboard."""
     try:
-        # The marker tells consumers this row is gone, not updated; the
-        # agent's panel drops it instead of folding it back in.
+        # "deleted" marks the row gone, not updated; the agent's panel drops it.
         return {**storage.delete_request(request_id), "deleted": True}
     except DashboardError as exc:
         return {"error": "dashboard_error", "detail": str(exc)}

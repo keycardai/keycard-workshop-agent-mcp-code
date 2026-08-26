@@ -41,14 +41,13 @@ def call_mcp(url: str, tool_name: str, args: dict, credential: str | None = None
         return result.content[0].text if result.content else "[]"
 
     try:
-        # The agent's tools are sync and each web request runs in its own
-        # thread, so a private event loop per call is safe and simple.
+        # Tools are sync and each web request runs in its own thread, so a
+        # private event loop per call is safe.
         return asyncio.run(_run())
     except Exception as exc:
-        # The transport runs on task groups, so failures arrive wrapped in
-        # (sometimes nested) ExceptionGroups; classify by the leaves. Its
-        # HTTP errors come from a vendored httpx, so match by module, not
-        # by class.
+        # Failures arrive wrapped in (sometimes nested) ExceptionGroups, so
+        # classify by the leaves. The transport's HTTP errors come from a
+        # vendored httpx, so match by module, not by class.
         leaves = _leaves(exc)
         if 401 in statuses:
             return f"Authorization error: the MCP server at {url} refused the call (401)."

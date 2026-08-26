@@ -48,8 +48,8 @@ def load_settings() -> Settings:
         keycard_client_id=env("KEYCARD_CLIENT_ID", "").strip(),
         keycard_client_secret=env("KEYCARD_CLIENT_SECRET", "").strip(),
         directory_key=env("DIRECTORY_KEY", "").strip(),
-        # These identifiers are matched byte-for-byte against what is
-        # registered in Keycard, so no trailing-slash trimming here.
+        # Matched byte-for-byte against what's registered in Keycard, so no
+        # trailing-slash trimming here.
         directory_key_resource=env("DIRECTORY_KEY_RESOURCE", "").strip(),
         llm_key_resource=env("LLM_KEY_RESOURCE", "").strip(),
         agent_resource=env("AGENT_RESOURCE", "").strip(),

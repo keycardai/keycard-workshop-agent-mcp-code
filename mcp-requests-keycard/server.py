@@ -39,9 +39,8 @@ ZONE_URL = _env("KEYCARD_ZONE_URL").rstrip("/")
 API = _env("REQUESTS_API_RESOURCE")
 
 # The zone's userinfo endpoint doubles as a registered resource: granting it
-# mints a credential that endpoint accepts, user-as-subject like every other
-# exchange. Discovered once at boot; the server can't verify tokens without
-# the zone anyway.
+# mints a credential that endpoint accepts. Discovered once at boot; the
+# server can't verify tokens without the zone anyway.
 try:
     with Client(ZONE_URL) as _client:
         _metadata = _client.discover_server_metadata()
@@ -52,8 +51,8 @@ if not USERINFO:
     raise SystemExit(f"{ZONE_URL} publishes no userinfo_endpoint; check KEYCARD_ZONE_URL")
 
 # One AuthProvider does both jobs: it verifies the delegated token on the way
-# in (the audience is this server's URL + /mcp), and it holds the server's own
-# credential for the exchanges each tool's grant() declares.
+# in, and it holds the server's own credential for the exchanges each tool's
+# grant() declares.
 auth = AuthProvider(
     zone_url=ZONE_URL,
     mcp_server_name="Requests MCP Server",
@@ -66,28 +65,24 @@ mcp = MCPServer("Requests MCP Server")
 
 
 def _credential(access: AccessContext) -> str:
-    """The minted requests-API credential, or the failure in plain words.
-    The grant already ran before the tool did; failures are recorded on the
-    AccessContext, never raised, so the tool decides how to say them.
+    """The minted requests-API credential. The grant already ran before the
+    tool did; failures are recorded on the AccessContext, never raised.
     """
     error = access.get_error() or access.get_resource_error(API)
     if error is None:
         return access.access(API).access_token
     if error.get("code") in ("insufficient_authorization", "consent_required"):
-        # A missing user grant is the one failure the caller can fix
-        # themselves; every other refusal stays a plain relay.
+        # A missing user grant is the one failure the caller can fix themselves.
         raise DashboardError(_authorization_needed())
     detail = error.get("description") or error.get("message") or error.get("code")
     raise DashboardError(f"Token exchange for the requests API failed: {detail}")
 
 
 def _caller(access: AccessContext, ctx: Context) -> str:
-    """The caller's stable identity. The verified delegated token rides on
-    the request (the AuthProvider's backend sets request.user), and zone
-    access tokens are authorization-only (audience + scopes), so the email
-    usually lives behind the zone's userinfo endpoint instead, reached with
-    the userinfo credential the tool's grant minted. The dashboard's rows
-    carry emails, so ownership checks must compare like for like."""
+    """The caller's email, for ownership checks against the dashboard's rows.
+    Zone access tokens are authorization-only, so the email usually lives
+    behind the zone's userinfo endpoint, reached with the credential the
+    tool's grant minted."""
     user = ctx.request_context.request.user
     claims = get_claims(user.access_token) if getattr(user, "access_token", None) else {}
     if claims.get("email"):
@@ -101,7 +96,7 @@ def _caller(access: AccessContext, ctx: Context) -> str:
             if info.claims.get("email"):
                 return info.claims["email"]
     except (OAuthError, ConfigError):
-        # Identity degrades to the sub rather than failing the whole call.
+        # Identity degrades to the sub instead of failing the whole call.
         pass
     return claims.get("sub") or "unknown"
 
@@ -205,8 +200,7 @@ def delete_request(request_id: str, *, access: AccessContext, ctx: Context) -> d
         caller = _caller(access, ctx)
         if row.get("requester") != caller:
             return _forbidden(request_id, row.get("requester", ""), caller, "delete")
-        # The marker tells consumers this row is gone, not updated; the
-        # agent's panel drops it instead of folding it back in.
+        # "deleted" marks the row gone, not updated; the agent's panel drops it.
         return {**storage.delete_request(request_id, credential), "deleted": True}
     except DashboardError as exc:
         return {"error": "dashboard_error", "detail": str(exc)}

@@ -445,9 +445,8 @@
 
   let refreshing = false;
   document.getElementById("refresh").addEventListener("click", async () => {
-    // A refresh is a fresh question; the old answer comes down while it's
-    // asked (and comes back with the result if it's still true). The poll
-    // pauses so it can't repaint the stale error mid-flight.
+    // The poll pauses during a refresh so it can't repaint a stale error
+    // mid-flight.
     refreshing = true;
     renderRecords(lastRecords, null);
     try {
@@ -463,9 +462,8 @@
   document.getElementById("panel-title").textContent = DOMAIN.panelTitle;
   input.placeholder = DOMAIN.placeholder;
 
-  // Emails render as names ("kim.maida@example.com" becomes "Kim Maida") so the
-  // people columns survive a narrow panel; hover shows the raw address.
-  // Non-email identities (Chapter 0's "api-key") pass through untouched.
+  // Emails render as names ("kim.maida@example.com" becomes "Kim Maida");
+  // hover shows the raw address. Non-email identities pass through untouched.
   function personName(value) {
     if (!value || !value.includes("@")) return value || "";
     return value.split("@")[0].replace(/[._]/g, " ")
@@ -619,10 +617,9 @@
     }).join("");
   }
 
-  // Streamed text is cut mid-markup constantly. Close dangling bold and
+  // Streamed text is cut mid-markup constantly: close dangling bold and
   // inline code and hide a half-typed link, so markdown formats as it
-  // streams instead of flashing raw markers. Complete text passes through
-  // unchanged.
+  // streams. Complete text passes through unchanged.
   function stabilizeMarkdown(s) {
     if (s.split("```").length % 2 === 0) return s; // mid-fence: it's code
     s = s.replace(/\[[^\]]*(\]\([^)\s]*)?$/, "");
@@ -713,9 +710,7 @@
       const link = document.createElement("a");
       link.href = interrupt.url;
       // Sign-in round-trips this page; consent happens elsewhere and the
-      // user comes back to press Resume. reason says why sign-in is needed:
-      // a session that expired mid-run reads differently from never having
-      // signed in at all.
+      // user comes back to press Resume. reason words the card.
       const signIn = interrupt.type === "sign_in_required";
       if (!signIn) {
         link.target = "_blank";
@@ -750,9 +745,8 @@
     scrollToEnd();
     let card = null;
     let finished = false;
-    // The model's stream arrives in multi-word slabs a few times a second;
-    // reveal it a few characters per frame instead, pacing by the backlog so
-    // the display never falls far behind the network but reads as typing.
+    // The stream arrives in multi-word slabs; reveal a few characters per
+    // frame, pacing by the backlog, so it reads as typing.
     let text = "";
     let shown = 0;
     let painting = 0;
@@ -774,12 +768,9 @@
     try {
       const response = await start();
       if (!response.ok) throw new Error(response.status);
-      // The reply streams back as JSON lines: "delta" appends the model's
-      // tokens to a live bubble, "tool" names a tool while it runs, "restart"
-      // hands the bubble to a new model step (only the final step's text is
-      // the reply), "interrupt" pauses the turn for sign-in or consent, and
-      // "reply" ends the turn with the definitive text and the panel's
-      // records.
+      // NDJSON events: "delta" appends tokens, "tool" names a running tool,
+      // "restart" hands the bubble to a new model step, "interrupt" pauses
+      // the turn, "reply" ends it with the definitive text and records.
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffered = "";
@@ -813,8 +804,7 @@
             repaint();
           }
           if (event.interrupt) {
-            // The run is paused, not dead: the middleware is waiting on
-            // sign-in or consent. Nothing joined the history yet.
+            // Paused, not dead: nothing joined the history yet.
             finished = true;
             renderRecords(event.records, event.error);
             waiting.remove();
@@ -856,8 +846,7 @@
     }));
   });
 
-  // Signed out is a state, not an error: until there's a user to act for,
-  // the app is a door, not a dashboard. The gate only engages once the
+  // Signed out is a state, not an error. The gate only engages once the
   // server advertises a login (Chapter 5); before that the page runs open.
   function renderGate(login) {
     const workspace = document.getElementById("workspace");

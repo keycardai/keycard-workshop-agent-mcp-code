@@ -36,12 +36,10 @@ SYSTEM_PROMPT = (
 
 @wrap_model_call
 def _repair_thinking_blocks(request, handler):
-    # A streamed turn can leave a thinking block holding a signature but no
-    # text: the model opened the block, wrote nothing, and signed it, and
-    # langchain-anthropic (<= 1.4.8) merges those chunks into a block with no
-    # "thinking" field at all, which the API then rejects when the turn's next
-    # model call sends the conversation back. Restore the field; empty is
-    # exactly what the model produced.
+    # langchain-anthropic (<= 1.4.8) merges a streamed thinking block that
+    # holds a signature but no text into one with no "thinking" field, which
+    # the API rejects on the turn's next model call. Restore the field;
+    # empty is what the model produced.
     for message in request.messages:
         if not isinstance(message.content, list):
             continue
@@ -52,10 +50,9 @@ def _repair_thinking_blocks(request, handler):
 
 
 def make_keycard_middleware(settings: Settings) -> KeycardGrantMiddleware:
-    """One middleware for every run shape: before each tool call it takes the
-    run's KeycardIdentity (the agent itself, or the signed-in user) to Keycard
-    and comes back with a token minted for that tool's resource. Nothing is
-    stored; every mint lands in the audit log.
+    """Before each tool call, take the run's KeycardIdentity (the agent
+    itself, or the signed-in user) to Keycard and mint a token for that
+    tool's resource. Nothing is stored; every mint lands in the audit log.
     """
     return KeycardGrantMiddleware(
         zone_url=require(settings.keycard_zone_url, "KEYCARD_ZONE_URL"),
@@ -75,10 +72,9 @@ def make_keycard_middleware(settings: Settings) -> KeycardGrantMiddleware:
     )
 
 
-# The process's one middleware instance, built on first use so a missing
-# setting surfaces as a message where it's noticed, not a crash at import.
-# One per process is load-bearing: the instance owns a background event loop
-# and a warm client cache that nothing ever stops, so building it per request
+# Built on first use so a missing setting surfaces as a message, not an
+# import-time crash. One instance per process is load-bearing: it owns a
+# background event loop and a warm client cache, so building it per request
 # would leak a thread per turn. It holds no identity; that arrives per run.
 _keycard: KeycardGrantMiddleware | None = None
 
@@ -97,8 +93,7 @@ def build_agent(
     keycard: KeycardGrantMiddleware | None = None,
     checkpointer: BaseCheckpointSaver | None = None,
 ) -> CompiledStateGraph:
-    # A hint for guessing addresses from names, not an allowlist; read here
-    # with a default because nothing else configures the prompt.
+    # A hint for guessing addresses from names, not an allowlist.
     system_prompt = SYSTEM_PROMPT.format(
         email_domain=os.environ.get("EMAIL_DOMAIN", "").strip() or "example.com"
     )

@@ -25,9 +25,8 @@ def _require(name: str) -> str:
 
 def _authorization_needed() -> str:
     """The consent-class exchange failure, phrased for the person who can fix
-    it. Only an interactive authorization can create (or revive) the caller's
-    grant for the requests API (no retry or server-side step can), so the
-    error carries the authorizer link when one is configured.
+    it: only an interactive authorization can create or revive the caller's
+    grant, so the error carries the authorizer link when one is configured.
     """
     message = (
         "The requests API isn't authorized to act on your behalf yet, or the "
@@ -40,18 +39,15 @@ def _authorization_needed() -> str:
             "refresh the dashboard or try again."
         )
     # Name the zone, client id, and resource explicitly instead of leaning on
-    # the page's baked-in defaults, which may change or disappear. The zone is
-    # necessarily the one this server exchanges tokens in.
+    # the page's baked-in defaults.
     query = [
         ("zone", _require("KEYCARD_ZONE_URL")),
         ("client_id", os.environ.get("AUTHORIZER_CLIENT_ID", "").strip()),
         ("resource", _require("REQUESTS_API_RESOURCE")),
     ]
     link = f"{base}/?{urlencode([(k, v) for k, v in query if v], quote_via=quote)}"
-    # One message serves both surfaces: the panel banner (refresh) and a
-    # chat reply (re-ask), so the fix names an action for each. The link
-    # goes last with nothing after it: renderers pull trailing punctuation
-    # into URLs, and a stray comma becomes part of the resource identifier.
+    # The link goes last with nothing after it: renderers pull trailing
+    # punctuation into URLs, and a stray comma joins the resource identifier.
     return (
         f"{message} Refresh the dashboard or send your request again after "
         f"authorizing access here: {link}"
@@ -59,9 +55,8 @@ def _authorization_needed() -> str:
 
 
 def _headers(credential: str | None) -> dict:
-    # The caller's delegation chain continues here: the grant on each tool
-    # already exchanged the user's token for this per-call credential, so
-    # storage only has to present it. Nothing is stored.
+    # Each tool's grant already minted this per-call credential; storage only
+    # has to present it. Nothing is stored.
     return {"Authorization": f"Bearer {credential}"} if credential else {}
 
 

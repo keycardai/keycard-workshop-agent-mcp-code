@@ -32,32 +32,26 @@ app.include_router(keycard_router)
 
 INDEX = Path(__file__).resolve().parent / "index.html"
 
-# One user, one process, memory only. The lock keeps a second browser tab
+# One user, one process, memory only; the lock keeps a second browser tab
 # from interleaving turns.
 messages: list[BaseMessage] = []
 chat_lock = threading.Lock()
 
 # Interrupt plumbing, not conversation memory: the grant middleware pauses a
-# run by checkpointing it, so each turn gets a throwaway thread and the saver
-# lives for the process. pending_thread names the one paused run, if any.
+# run by checkpointing it. pending_thread names the one paused run, if any.
 checkpointer = InMemorySaver()
 pending_thread: str | None = None
 
-# The dashboard view the page's panel shows: seeded on page load, folded forward
-# after every streamed step, kept across resets. panel_error is the last fetch
-# failure in plain words, or None while the view is honest.
+# The panel's dashboard view; panel_error is the last fetch failure in plain words.
 panel_view: list[dict] = []
 panel_error: str | None = None
 
 def panel_records(
     history: list[BaseMessage], base: list[dict]
 ) -> tuple[list[dict], bool]:
-    """Fold the request tools' JSON output onto base, the latest known dashboard
-    view: a full listing replaces it, a single request merges in by "id".
-    The page never fetches the dashboard itself; everything it shows went
-    through the agent's tools (dashboard_snapshot seeds the page load). The
-    second element reports whether any real dashboard data arrived, the cue
-    that a standing panel error is stale.
+    """Fold the request tools' JSON output onto base: a full listing replaces
+    it, a single request merges in by "id". The second element reports whether
+    any real dashboard data arrived.
     """
     records = list(base)
     saw_data = False
@@ -82,19 +76,14 @@ def panel_records(
     return records, saw_data
 
 
-# One middleware for the process (graph.shared_middleware): it holds no
-# identity (that arrives per run via context), and sharing it keeps its
-# per-loop client cache and metadata discovery warm across turns. llm.py's
-# vault fetch grants through the same instance.
 def _middleware() -> KeycardGrantMiddleware:
     return shared_middleware(settings)
 
 
 def dashboard_snapshot() -> tuple[list[dict] | None, str | None]:
     """The dashboard, fetched through the same governed tool the agent uses
-    in chat: grant() serves the tool's access context outside a run, so this
-    page plumbing takes the exact code path (and error wording) tool calls
-    do. None records means the fetch failed, and the second element says why.
+    in chat: grant() serves the tool's access context outside a run. None
+    means the fetch failed; the second element says why.
     """
     try:
         keycard = _middleware()
@@ -141,12 +130,11 @@ def _stream_turn(graph_input, thread_id: str):
     """
     global messages, panel_view, panel_error, pending_thread
     with chat_lock:
-        # Assembled under the lock: a racing second tab reads the finished
-        # history, not a stale snapshot it would later overwrite.
+        # Assembled under the lock so a racing second tab reads finished history.
         if isinstance(graph_input, HumanMessage):
             graph_input = {"messages": messages + [graph_input]}
-        # Captured before the run: the session can expire between the
-        # endpoint's backstop and this generator actually running.
+        # The session can expire between the endpoint's backstop and this
+        # generator actually running.
         try:
             subject_token = store.user_token
         except NotLoggedIn as exc:
@@ -154,9 +142,8 @@ def _stream_turn(graph_input, thread_id: str):
                 {"reply": str(exc), "records": panel_view, "error": panel_error}
             ) + "\n"
             return
-        # Assembled per turn: nothing the model holds outlives the request.
-        # The Keycard middleware is the one exception, shared because it
-        # holds no identity, only warm plumbing (see _middleware).
+        # Built per turn: nothing the model holds outlives the request. The
+        # shared Keycard middleware is the one exception; it holds no identity.
         try:
             agent = build_agent(
                 get_llm(settings),
@@ -170,17 +157,15 @@ def _stream_turn(graph_input, thread_id: str):
                 {"reply": f"Configuration error: {exc}", "records": panel_view}
             ) + "\n"
             return
-        # "messages" streams tokens to the page; "values" refreshes the
-        # panel after each tool result; "updates" carries the middleware's
-        # pause, if any. The turn joins the history only once the model
-        # finishes, so a failed or paused call leaves nothing behind.
+        # The turn joins the history only once the model finishes, so a
+        # failed or paused call leaves nothing behind.
         turn = messages
         streaming_id = None
         interrupt_payload = None
         for mode, payload in agent.stream(
             graph_input,
             {"configurable": {"thread_id": thread_id}},
-            # Runtime context is not checkpointed: every run, resumed ones
+            # Runtime context is not checkpointed: every run, resumed runs
             # included, re-supplies the signed-in user's identity.
             context=KeycardIdentity(subject_token=subject_token),
             stream_mode=["messages", "values", "updates"],
@@ -189,8 +174,8 @@ def _stream_turn(graph_input, thread_id: str):
                 chunk, _ = payload
                 if not isinstance(chunk, AIMessageChunk) or not chunk.text:
                     continue
-                # A new model step (after a tool call) starts the bubble
-                # over: only the final step's text is the reply.
+                # A new model step starts the bubble over; only the final
+                # step's text is the reply.
                 if chunk.id != streaming_id:
                     if streaming_id is not None:
                         yield json.dumps({"restart": True}) + "\n"
@@ -198,9 +183,8 @@ def _stream_turn(graph_input, thread_id: str):
                 yield json.dumps({"delta": str(chunk.text)}) + "\n"
             elif mode == "values":
                 turn = payload["messages"]
-                # Fold this turn's new tool results onto the latest known
-                # view; earlier turns are already in. Real data arriving
-                # means any standing panel error has been outlived.
+                # Fold only this turn's new tool results; earlier turns
+                # are already in.
                 panel_view, saw_data = panel_records(turn[len(messages):], panel_view)
                 if saw_data:
                     panel_error = None
@@ -214,8 +198,8 @@ def _stream_turn(graph_input, thread_id: str):
             yield json.dumps(
                 {"interrupt": {
                     "type": interrupt_payload.get("type"),
-                    # Why sign-in is needed: "missing_identity" or
-                    # "subject_token_expired". The page words its card by this.
+                    # "missing_identity" or "subject_token_expired"; the page
+                    # words its card by this.
                     "reason": interrupt_payload.get("reason"),
                     "message": interrupt_payload.get("message"),
                     "url": interrupt_payload.get("authorization_url")
@@ -235,7 +219,7 @@ def _stream_turn(graph_input, thread_id: str):
 def chat(body: ChatRequest) -> StreamingResponse:
     global pending_thread
     # The page gates itself behind sign-in; this backstop covers everything
-    # that isn't the page. No user, no agent: there is nobody to act for.
+    # that isn't the page.
     if store.claims() is None:
         return _refusal("No one is signed in. Sign in first.")
     # A new message abandons any paused run: fresh thread, fresh turn.
@@ -254,7 +238,7 @@ def chat_resume() -> StreamingResponse:
     """
     if store.claims() is None:
         return _refusal("No one is signed in. Sign in first.")
-    # Captured once: a racing new message clears the global mid-request.
+    # Captured once; a racing new message clears the global mid-request.
     thread_id = pending_thread
     if thread_id is None:
         return _refusal("Nothing is waiting to resume.")
@@ -271,9 +255,8 @@ def panel() -> dict:
 
 @app.post("/panel/refresh")
 def refresh_panel() -> dict:
-    """The page's refresh button: re-snapshot the dashboard and make that the
-    panel's latest known view. A failed fetch keeps the current one and
-    reports why it can't be trusted."""
+    """Re-snapshot the dashboard; a failed fetch keeps the current view and
+    reports why."""
     global panel_view, panel_error
     fresh, panel_error = dashboard_snapshot()
     if fresh is not None:
@@ -284,16 +267,14 @@ def refresh_panel() -> dict:
 @app.get("/history")
 def history() -> dict:
     global panel_view, panel_error
-    # Final replies only: the live view clears tool-calling interludes, so
-    # they must not reappear on refresh.
+    # Final replies only: tool-calling interludes must not reappear on refresh.
     turns = [
         {"role": "you" if m.type == "human" else "agent", "text": m.text}
         for m in messages
         if m.text and (m.type == "human" or m.type == "ai" and not m.tool_calls)
     ]
-    # Every page load re-reads the dashboard, so the panel reflects the world
-    # as it stands now (an authorization granted since the last error clears
-    # it), not the last thing that happened to this process.
+    # Re-read the dashboard on every page load, so an authorization granted
+    # since the last error clears it.
     fresh, panel_error = dashboard_snapshot()
     if fresh is not None:
         panel_view = fresh
@@ -306,7 +287,7 @@ def history() -> dict:
 
 @app.post("/reset")
 def reset() -> dict:
-    """Clear the chat. Sign-in and the panel survive; the dashboard outlives
+    """Clear the chat; sign-in and the panel survive, the dashboard outlives
     conversations."""
     global messages, pending_thread
     with chat_lock:
@@ -324,11 +305,11 @@ def me() -> dict:
 
 
 def serve() -> None:
-    # Fail before uvicorn does, with a message that says what to do about it.
+    # Probe the port first so a conflict fails with a message that says what
+    # to do about it. Match uvicorn's SO_REUSEADDR so TIME_WAIT sockets don't
+    # read as a conflict; skip it on Windows, where the flag would let the
+    # probe bind straight over a still-running agent.
     probe = socket.socket()
-    # Match uvicorn's SO_REUSEADDR so TIME_WAIT sockets from a just-closed
-    # run don't read as a conflict. Skip it on Windows, where the flag would
-    # let the probe bind straight over a still-running agent.
     if os.name != "nt":
         probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
@@ -343,6 +324,6 @@ def serve() -> None:
         probe.close()
 
     print(f"Agent running. Open http://localhost:{settings.agent_port}")
-    # One process, one worker: the token store and conversation live in module
-    # memory. Passing the app object (not an import string) keeps reload off.
+    # One worker: state lives in module memory. Passing the app object
+    # (not an import string) keeps reload off.
     uvicorn.run(app, host="127.0.0.1", port=settings.agent_port, log_level="warning")

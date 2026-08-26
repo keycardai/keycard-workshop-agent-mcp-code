@@ -1,10 +1,7 @@
-"""A background one-shot with no user anywhere: the environment brief.
+"""The environment brief: a background one-shot with no user anywhere.
 
-The agent runs as itself (KeycardIdentity(as_self=True)): the vault releases
-the directory key to the application's own identity, per call, and every
-retrieval is an audit event attributed to the agent alone. As-itself runs
-never pause for sign-in or consent (there is no user to send anywhere), so
-this needs no checkpointer and no interrupt handling.
+The agent runs as itself (KeycardIdentity(as_self=True)). As-itself runs
+never pause for sign-in or consent, so no checkpointer and no interrupts.
 
 Run: python -m agent-keycard brief
 """

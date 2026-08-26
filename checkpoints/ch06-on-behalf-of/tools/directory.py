@@ -1,11 +1,8 @@
 """Tools for the directory MCP server.
 
 The directory is hosted for the whole workshop and holds org data, not user
-data. The grant middleware releases the directory key from the Keycard vault
-per call, under whichever identity the run carries: the application's own
-(the background brief) or the signed-in user's (chat: the user asked, so the
-chain carries the user). Compare tools/requests_queue.py, where the calls are
-always meant to go out on the user's behalf.
+data. Compare tools/requests_queue.py, where every call goes out on the
+signed-in user's behalf.
 """
 
 from keycardai.langchain import get_access_context
@@ -35,8 +32,6 @@ def make_directory_tools(settings: Settings) -> list[BaseTool]:
         try:
             access = get_access_context()
         except RuntimeError:
-            # Chat runs without the grant middleware until Chapter 5's web.py
-            # wires it in; until then this tool has no identity to act under.
             return (
                 "Authorization error: no grant middleware is wired into "
                 "this run, so there is no identity to act under. Chapter 5 "

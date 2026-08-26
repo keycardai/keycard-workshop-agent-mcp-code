@@ -1,10 +1,9 @@
 """Tools for the requests MCP server.
 
 The dashboard is user data, so every call is meant to go out on the
-signed-in user's behalf: the agent exchanges the user's token for a
-credential minted for the dashboard (RFC 8693), one per call, never
-stored. Chapter 6 wires that exchange. Compare tools/directory.py,
-where the agent acts as itself.
+signed-in user's behalf: the user's token is exchanged for a credential
+minted for the dashboard (RFC 8693), one per call, never stored. Compare
+tools/directory.py, which holds org data, not user data.
 """
 
 from langchain_core.tools import BaseTool, tool

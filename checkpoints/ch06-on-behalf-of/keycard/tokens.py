@@ -12,9 +12,8 @@ class NotLoggedIn(Exception):
 
 
 class TokenStore:
-    """Holds the signed-in user's token, in memory only. Per-call resource
-    credentials are minted by the grant middleware, which exchanges this
-    token; they are never stored here.
+    """The signed-in user's token, in memory only. Per-call resource
+    credentials are minted by the grant middleware, never stored here.
     """
 
     def __init__(self) -> None:
@@ -30,8 +29,8 @@ class TokenStore:
 
     @property
     def user_token(self) -> str:
-        # Capture before the expiry check: claims() clears the slot when the
-        # token expires, and a concurrent request may hit that first.
+        # Capture before the expiry check: claims() clears the slot on
+        # expiry, and a concurrent request may hit that first.
         token = self._user_token
         if token is None:
             raise NotLoggedIn("No user is signed in. Sign in first.")
@@ -40,8 +39,8 @@ class TokenStore:
         return token
 
     def claims(self) -> dict | None:
-        # Expiry clears the token here so the chat page's /me check flips to
-        # signed-out too, not just the tools' exchange path.
+        # Expiry clears the token here so /me flips to signed-out too, not
+        # just the tools' exchange path.
         if self._user_token is None:
             return None
         claims = get_claims(self._user_token)
@@ -51,10 +50,9 @@ class TokenStore:
         return claims
 
     def _userinfo_claims(self) -> dict:
-        """Identity claims from the zone's userinfo endpoint. Zone access
-        tokens are authorization-only (audience + scopes); who the user is
-        (email, groups) lives behind userinfo. Cached per token; a failed
-        fetch isn't cached, so the next call retries.
+        """Identity claims from the zone's userinfo endpoint: zone access
+        tokens are authorization-only, so email and groups live behind
+        userinfo. Cached per token; a failed fetch retries next call.
         """
         token = self._user_token
         if token is None:
