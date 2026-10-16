@@ -57,6 +57,8 @@ auth = AuthProvider(
     zone_url=ZONE_URL,
     mcp_server_name="Requests MCP Server",
     mcp_server_url="http://localhost:8300",
+    # Accept only tokens minted for this server's registered resource.
+    audience="http://localhost:8300/mcp",
     application_credential=ClientSecret(
         (_env("REQUESTS_MCP_CLIENT_ID"), _env("REQUESTS_MCP_CLIENT_SECRET"))
     ),
