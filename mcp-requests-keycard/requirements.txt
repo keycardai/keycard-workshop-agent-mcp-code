@@ -1,6 +1,6 @@
 mcp>=2,<3
 keycardai-mcp>=2,<3
-keycardai-oauth==0.23.0
-uvicorn==0.51.0
+keycardai-oauth==0.33.1
+uvicorn==0.54.0
 httpx==0.28.1
 python-dotenv>=1.0
