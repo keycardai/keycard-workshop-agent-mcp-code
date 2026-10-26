@@ -1,10 +1,10 @@
-langchain==1.4.6
+langchain==1.4.7
 langchain-openai==1.7.2
 langchain-anthropic==1.7.6
-keycardai-oauth==0.33.1
-keycardai-langchain==0.7.1
+keycardai-oauth==0.33.2
+keycardai-langchain==0.7.2
 mcp==2.3.0
 httpx==0.28.1
 python-dotenv==1.2.4
-fastapi==0.143.3
+fastapi==0.162.0
 uvicorn==0.54.0
