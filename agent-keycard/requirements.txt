@@ -1,6 +1,6 @@
 langchain==1.4.7
-langchain-openai==1.7.2
-langchain-anthropic==1.7.6
+langchain-openai==1.7.3
+langchain-anthropic==1.7.7
 keycardai-oauth==0.33.2
 keycardai-langchain==0.7.2
 mcp==2.3.0
