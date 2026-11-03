@@ -13,7 +13,7 @@ import uvicorn
 from dotenv import load_dotenv
 from keycardai.mcp.server.auth import AccessContext, AuthProvider, ClientSecret
 from keycardai.oauth import Client
-from keycardai.oauth.exceptions import ConfigError, OAuthError
+from keycardai.oauth.exceptions import OAuthError
 from keycardai.oauth.utils.jwt import get_claims
 from mcp.server.mcpserver import Context, MCPServer
 
@@ -73,7 +73,7 @@ def _credential(access: AccessContext) -> str:
     error = access.get_error() or access.get_resource_error(API)
     if error is None:
         return access.access(API).access_token
-    if error.get("code") in ("insufficient_authorization", "consent_required"):
+    if error.get("code") in ("insufficient_authorization", "interaction_required"):
         # A missing user grant is the one failure the caller can fix themselves.
         raise DashboardError(_authorization_needed())
     detail = error.get("description") or error.get("message") or error.get("code")
@@ -84,23 +84,24 @@ def _caller(access: AccessContext, ctx: Context) -> str:
     """The caller's email, for ownership checks against the dashboard's rows.
     Zone access tokens are authorization-only, so the email usually lives
     behind the zone's userinfo endpoint, reached with the credential the
-    tool's grant minted."""
+    tool's grant minted. Ownership hangs on this answer, so a failure stops
+    the call instead of guessing who is asking."""
     user = ctx.request_context.request.user
     claims = get_claims(user.access_token) if getattr(user, "access_token", None) else {}
     if claims.get("email"):
         return claims["email"]
+    error = access.get_resource_error(USERINFO)
+    if error is not None:
+        detail = error.get("description") or error.get("message") or error.get("code")
+        raise DashboardError(f"Token exchange for the userinfo endpoint failed: {detail}")
     try:
-        if access.get_resource_error(USERINFO) is None:
-            with Client(ZONE_URL) as client:
-                info = client.userinfo(
-                    access.access(USERINFO).access_token, metadata=_metadata
-                )
-            if info.claims.get("email"):
-                return info.claims["email"]
-    except (OAuthError, ConfigError):
-        # Identity degrades to the sub instead of failing the whole call.
-        pass
-    return claims.get("sub") or "unknown"
+        with Client(ZONE_URL) as client:
+            info = client.userinfo(access.access(USERINFO).access_token, metadata=_metadata)
+    except OAuthError as exc:
+        raise DashboardError(f"Keycard's userinfo endpoint failed: {exc}") from exc
+    if not info.claims.get("email"):
+        raise DashboardError("Keycard's userinfo endpoint returned no email for you.")
+    return info.claims["email"]
 
 
 def _forbidden(request_id: str, owner: str, caller: str, action: str) -> dict:
@@ -143,10 +144,11 @@ def create_request(
     """File a new request on the dashboard. Priority is low, normal, or high;
     assignee is an email address."""
     try:
+        credential = _credential(access)
         return storage.create_request(
             {"title": title, "priority": priority, "assignee": assignee},
             identity=_caller(access, ctx),
-            credential=_credential(access),
+            credential=credential,
         )
     except DashboardError as exc:
         return {"error": "dashboard_error", "detail": str(exc)}

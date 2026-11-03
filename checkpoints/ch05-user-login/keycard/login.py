@@ -16,7 +16,6 @@ from keycardai.oauth import (
     OAuthError,
     StateMismatchError,
 )
-from keycardai.oauth.exceptions import ConfigError
 from keycardai.oauth.pkce import (
     AuthorizationRedirect,
     begin_authorization,
@@ -107,7 +106,7 @@ async def callback(request: Request) -> Response:
         )
     except OAuthError as exc:
         return _error_page(
-            f"Token exchange failed ({exc}). Check KEYCARD_CLIENT_ID and "
+            f"Could not redeem the sign-in code ({exc}). Check KEYCARD_CLIENT_ID and "
             "KEYCARD_CLIENT_SECRET in agent/.env."
         )
     store.set_user_token(token.access_token)
@@ -124,7 +123,7 @@ def logout() -> Response:
     try:
         with Client(settings.keycard_zone_url) as client:
             end_session = client.discover_server_metadata().end_session_endpoint
-    except (OAuthError, ConfigError):
+    except OAuthError:
         end_session = None
     if not end_session:
         # The agent side is signed out regardless; the browser keeps its zone

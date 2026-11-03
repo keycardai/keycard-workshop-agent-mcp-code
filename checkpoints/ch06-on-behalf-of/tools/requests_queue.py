@@ -2,8 +2,7 @@
 
 The dashboard is user data, so every call is meant to go out on the
 signed-in user's behalf: the user's token is exchanged for a credential
-minted for the dashboard (RFC 8693), one per call, never stored. Compare
-tools/directory.py, which holds org data, not user data.
+minted for the dashboard (RFC 8693), one per call, never stored.
 """
 
 from keycardai.langchain import get_access_context
@@ -42,7 +41,8 @@ def make_request_tools(settings: Settings) -> list[BaseTool]:
         """File a new request on the dashboard. Priority is low, normal, or high.
         assignee is an email address, or empty to leave it unassigned; if the
         user gives a name instead, resolve it to an email and confirm before
-        filing, and never file an invented address."""
+        filing, and never file an invented address. Say why in the title; if
+        the user hasn't said why, ask before filing, and never invent a reason."""
         return _call(
             "create_request", {"title": title, "priority": priority, "assignee": assignee}
         )
@@ -83,7 +83,7 @@ def make_request_tools(settings: Settings) -> list[BaseTool]:
 
     def _describe(error: dict) -> str:
         code = error.get("code")
-        if code in ("insufficient_authorization", "consent_required"):
+        if code in ("insufficient_authorization", "interaction_required"):
             return (
                 "Consent for this resource is missing or expired. "
                 "Sign in again and approve access."

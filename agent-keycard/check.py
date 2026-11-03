@@ -15,7 +15,6 @@ def main() -> int:
         _check("LLM responds", _check_llm, settings),
         _check("Keycard discovery", _check_discovery, settings),
         _check("Application credentials present", _check_credentials, settings),
-        _check("Directory MCP server reachable", _check_directory, settings),
         _check("Requests MCP server reachable", _check_requests, settings),
     ]
     return 0 if all(results) else 1
@@ -46,10 +45,6 @@ def _check_credentials(settings: Settings) -> None:
     require(settings.keycard_client_secret, "KEYCARD_CLIENT_SECRET")
 
 
-def _check_directory(settings: Settings) -> None:
-    # Any HTTP answer proves the server is up; a 401 means it's already protected.
-    httpx.get(settings.directory_mcp)
-
-
 def _check_requests(settings: Settings) -> None:
+    # Any HTTP answer proves the server is up; a 401 means it's already protected.
     httpx.get(settings.requests_mcp)

@@ -8,12 +8,11 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 
 _SET_IN_CHAPTER = {
     "MODEL": "Chapter 0",
-    "DIRECTORY_KEY": "Chapter 0",
     "AGENT_RESOURCE": "Chapter 3",
     "KEYCARD_ZONE_URL": "Chapter 3",
     "KEYCARD_CLIENT_ID": "Chapter 3",
     "KEYCARD_CLIENT_SECRET": "Chapter 3",
-    "LLM_KEY_RESOURCE": "Chapter 8",
+    "LLM_KEY_RESOURCE": "Chapter 4",
 }
 
 
@@ -27,12 +26,11 @@ class Settings:
     keycard_zone_url: str
     keycard_client_id: str
     keycard_client_secret: str
-    directory_key: str
-    directory_key_resource: str
     llm_key_resource: str
     agent_resource: str
-    directory_mcp: str
     requests_mcp: str
+    requests_api_url: str
+    requests_api_integrations: str
     agent_port: int
 
     @property
@@ -47,15 +45,20 @@ def load_settings() -> Settings:
         keycard_zone_url=env("KEYCARD_ZONE_URL", "").strip().rstrip("/"),
         keycard_client_id=env("KEYCARD_CLIENT_ID", "").strip(),
         keycard_client_secret=env("KEYCARD_CLIENT_SECRET", "").strip(),
-        directory_key=env("DIRECTORY_KEY", "").strip(),
         # Matched byte-for-byte against what's registered in Keycard, so no
         # trailing-slash trimming here.
-        directory_key_resource=env("DIRECTORY_KEY_RESOURCE", "").strip(),
         llm_key_resource=env("LLM_KEY_RESOURCE", "").strip(),
         agent_resource=env("AGENT_RESOURCE", "").strip(),
         requests_mcp=env("REQUESTS_MCP", "http://localhost:8300/mcp").strip(),
-        # The hosted directory server; not a Keycard resource, just a URL.
-        directory_mcp=env("DIRECTORY_MCP", "https://keycard-workshop-directory-mcp.fly.dev/mcp").strip(),
+        # Chapter 7's reviewer calls the requests API directly, as the agent
+        # itself, with a token Keycard mints for the API's Integrations resource.
+        requests_api_url=env(
+            "REQUESTS_API_URL", "https://keycard-workshop-requests-api.fly.dev"
+        ).strip().rstrip("/"),
+        requests_api_integrations=env(
+            "REQUESTS_API_INTEGRATIONS",
+            "https://keycard-workshop-requests-api.fly.dev/integrations",
+        ).strip(),
         agent_port=int(env("AGENT_PORT", "8484")),
     )
 

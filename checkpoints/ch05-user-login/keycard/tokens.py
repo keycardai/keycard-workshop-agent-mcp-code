@@ -1,7 +1,7 @@
 import time
 
 from keycardai.oauth import Client
-from keycardai.oauth.exceptions import ConfigError, OAuthError
+from keycardai.oauth.exceptions import OAuthError
 from keycardai.oauth.utils.jwt import get_claims
 
 from ..config import load_settings
@@ -63,7 +63,7 @@ class TokenStore:
         try:
             with Client(settings.keycard_zone_url) as client:
                 response = client.userinfo(token)
-        except (OAuthError, ConfigError):
+        except OAuthError:
             # Identity display degrades to the sub; nothing else breaks.
             return {}
         self._userinfo = (token, response.claims)

@@ -1,8 +1,8 @@
 # Keycard Builder Workshop
 
-Run a local LangChain agent against a hosted directory and a shared team
-request dashboard, both over MCP, then give every hop a real identity through
-[Keycard](https://keycard.ai). The closing chapter revokes both shared keys
+Run a local LangChain agent against a shared team request dashboard over
+MCP, then give every hop a real identity through
+[Keycard](https://keycard.ai). The closing chapter revokes the shared API key
 live, and the finished stack keeps working: by then every access
 is minted per call and audited.
 
@@ -21,10 +21,9 @@ start there with **Prerequisites**.
 | `checkpoints/` | Known-good snapshots of the agent to catch up from |
 | `scripts/` | `restore_checkpoint.py`, for catching up from a checkpoint |
 
-The two hosted services have no folder here. Instructors run the directory
-MCP server at `https://keycard-workshop-directory-mcp.fly.dev/mcp` and the shared
-requests API at `https://keycard-workshop-requests-api.fly.dev`; attendees never run or edit
-either.
+The hosted service has no folder here. Instructors run the shared requests
+API at `https://keycard-workshop-requests-api.fly.dev`; attendees never run or
+edit it.
 
 ## How to run
 
@@ -39,8 +38,7 @@ python -m agent                         # shell 2: the agent, http://localhost:8
 ```
 
 On Windows, activate with `.\.venv\Scripts\Activate.ps1` instead. Each folder's
-`.env.example` explains its configuration. Chapter 0 fills in two sections of
-`agent/.env`: your model settings, and `DIRECTORY_KEY`, the shared guest key
-for the hosted directory that instructors hand out at the start. The
+`.env.example` explains its configuration. Chapter 0 fills in your model
+settings in `agent/.env`. The
 [guide](https://keycard-workshop-agent-mcp-docs.fly.dev) walks through the
 rest in order.

@@ -9,12 +9,13 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, StreamingResponse
-from langchain_core.messages import AIMessageChunk, BaseMessage, HumanMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, HumanMessage
 from pydantic import BaseModel
 
 from .config import MissingConfig, load_settings
 from .graph import build_agent
 from .llm import get_llm
+from .review import review_filed
 from .tools import get_tools
 from .tools.requests_queue import REQUEST_TOOLS
 
@@ -117,7 +118,8 @@ def chat(body: ChatRequest) -> StreamingResponse:
         with chat_lock:
             # Built per turn: nothing the model holds outlives the request.
             try:
-                agent = build_agent(get_llm(settings), tools)
+                llm = get_llm(settings)
+                agent = build_agent(llm, tools)
             except MissingConfig as exc:
                 yield json.dumps(
                     {"reply": f"Configuration error: {exc}", "records": panel_view}
@@ -151,10 +153,15 @@ def chat(body: ChatRequest) -> StreamingResponse:
                     if turn[-1].type == "ai" and turn[-1].tool_calls:
                         for call in turn[-1].tool_calls:
                             yield json.dumps({"tool": call["name"]}) + "\n"
+            reply = str(turn[-1].text)
+            # Chapter 7: the agent reviews each request this turn filed, as itself.
+            panel_view, note = review_filed(turn[len(messages):], panel_view, llm, settings)
+            if note:
+                reply += f"\n\n{note}"
+                turn = turn + [AIMessage(note)]
             messages = turn
             yield json.dumps(
-                {"reply": str(messages[-1].text), "records": panel_view,
-                 "error": panel_error}
+                {"reply": reply, "records": panel_view, "error": panel_error}
             ) + "\n"
 
     return StreamingResponse(events(), media_type="application/x-ndjson")

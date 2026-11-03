@@ -372,11 +372,11 @@
   const DOMAIN = {
     panelTitle: "Request queue",
     emptyHint: "The dashboard is empty. Ask the agent to file a request.",
-    placeholder: "Ask about the environment, or file a request",
-    columns: [["id", "ID", "key"], ["title", "title"], ["requester", "requester"], ["assignee", "assignee"], ["status", "status"]],
+    placeholder: "Ask about the dashboard, or file a request",
+    columns: [["id", "ID", "key"], ["title", "title"], ["requester", "requester"], ["assignee", "assignee"], ["status", "status"], ["catalog_item", "approved item"], ["approved_by", "approved by"]],
     personFields: ["requester", "assignee"],
     statusField: "status",
-    statusTone: { open: "warn", in_progress: "dim", done: "ok" },
+    statusTone: { open: "warn", in_progress: "dim", done: "ok", approved: "ok" },
     priorityField: "priority",
     priorityColumn: "title",
   };
@@ -693,48 +693,10 @@
     const history = await (await fetch("/history")).json();
     for (const turn of history.turns) addMessage(turn.role, turn.text);
     renderRecords(history.records, history.error);
-    // A paused run survives the sign-in round trip; offer to pick it up.
-    if (history.pending) {
-      addInterrupt({ message: "A previous run is paused, waiting on authorization." });
-    }
     scrollToEnd(true);
   }
 
-  // A paused run's card: the middleware stopped mid-turn for sign-in or
-  // consent. The link opens where that happens; Resume retries the run.
-  function addInterrupt(interrupt) {
-    const note = document.createElement("div");
-    note.className = "panel-error";
-    note.append((interrupt.message || "The agent is waiting on authorization.") + " ");
-    if (interrupt.url) {
-      const link = document.createElement("a");
-      link.href = interrupt.url;
-      // Sign-in round-trips this page; consent happens elsewhere and the
-      // user comes back to press Resume. reason words the card.
-      const signIn = interrupt.type === "sign_in_required";
-      if (!signIn) {
-        link.target = "_blank";
-        link.rel = "noopener";
-      }
-      link.textContent = !signIn ? "Grant access"
-        : interrupt.reason === "subject_token_expired" ? "Sign in again"
-        : "Sign in";
-      note.append(link, " ");
-    }
-    const resume = document.createElement("button");
-    resume.type = "button";
-    resume.textContent = "Resume";
-    resume.addEventListener("click", () => {
-      resume.disabled = true;
-      runTurn(() => fetch("/chat/resume", { method: "POST" }));
-    });
-    note.append(resume);
-    transcript.appendChild(note);
-    scrollToEnd();
-  }
-
-  // One agent run, streamed into the transcript: the submit handler and the
-  // Resume button differ only in the request that starts the run.
+  // One agent run, streamed into the transcript; start() makes the request.
   async function runTurn(start) {
     input.disabled = true;
     send.disabled = true;
@@ -769,8 +731,8 @@
       const response = await start();
       if (!response.ok) throw new Error(response.status);
       // NDJSON events: "delta" appends tokens, "tool" names a running tool,
-      // "restart" hands the bubble to a new model step, "interrupt" pauses
-      // the turn, "reply" ends it with the definitive text and records.
+      // "restart" hands the bubble to a new model step, "reply" ends the
+      // turn with the definitive text and records.
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffered = "";
@@ -802,13 +764,6 @@
             text += event.delta;
             waiting.remove();
             repaint();
-          }
-          if (event.interrupt) {
-            // Paused, not dead: nothing joined the history yet.
-            finished = true;
-            renderRecords(event.records, event.error);
-            waiting.remove();
-            addInterrupt(event.interrupt);
           }
           if ("reply" in event) {
             finished = true;
