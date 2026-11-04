@@ -4,6 +4,7 @@ module neither requests nor stores them.
 """
 
 import asyncio
+import json
 
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
@@ -37,6 +38,14 @@ def call_mcp(url: str, tool_name: str, args: dict, credential: str | None = None
             # Tool failures arrive as a flagged result, not an exception.
             text = result.content[0].text if result.content else "unknown error"
             return f"The tool call failed: {text}"
+        # The structured result carries the whole return value; the content
+        # blocks split a list into one block per item. mcp wraps a non-object
+        # return as {"result": ...}, so unwrap that.
+        if result.structured_content is not None:
+            data = result.structured_content
+            if data.keys() == {"result"}:
+                data = data["result"]
+            return json.dumps(data)
         # An empty list serializes to zero content blocks, not "[]".
         return result.content[0].text if result.content else "[]"
 

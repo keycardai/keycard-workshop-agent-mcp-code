@@ -71,6 +71,7 @@ def _local_create(fields: dict, identity: str | None) -> dict:
         row = {
             "id": f"REQ-{_local_seq}",
             "title": fields["title"],
+            "description": fields.get("description", ""),
             "requester": identity or "api-key",
             "assignee": fields.get("assignee", ""),
             "priority": fields.get("priority", "normal"),

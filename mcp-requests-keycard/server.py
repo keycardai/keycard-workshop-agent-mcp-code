@@ -100,7 +100,10 @@ def _caller(access: AccessContext, ctx: Context) -> str:
     except OAuthError as exc:
         raise DashboardError(f"Keycard's userinfo endpoint failed: {exc}") from exc
     if not info.claims.get("email"):
-        raise DashboardError("Keycard's userinfo endpoint returned no email for you.")
+        raise DashboardError(
+            "Keycard's userinfo endpoint returned no email for you "
+            f"(claims: {', '.join(sorted(info.claims)) or 'none'})."
+        )
     return info.claims["email"]
 
 
@@ -136,17 +139,18 @@ def get_request(request_id: str, *, access: AccessContext, ctx: Context) -> dict
 
 
 @mcp.tool()
-@auth.grant([API, USERINFO])
+@auth.grant([API, USERINFO], request_scopes={USERINFO: "email"})
 def create_request(
-    title: str, priority: str = "normal", assignee: str = "",
+    title: str, description: str = "", priority: str = "normal", assignee: str = "",
     *, access: AccessContext, ctx: Context,
 ) -> dict:
-    """File a new request on the dashboard. Priority is low, normal, or high;
-    assignee is an email address."""
+    """File a new request on the dashboard. Title is a short label; description
+    says what is needed and why. Priority is low, normal, or high; assignee is
+    an email address."""
     try:
         credential = _credential(access)
         return storage.create_request(
-            {"title": title, "priority": priority, "assignee": assignee},
+            {"title": title, "description": description, "priority": priority, "assignee": assignee},
             identity=_caller(access, ctx),
             credential=credential,
         )
@@ -155,7 +159,7 @@ def create_request(
 
 
 @mcp.tool()
-@auth.grant([API, USERINFO])
+@auth.grant([API, USERINFO], request_scopes={USERINFO: "email"})
 def update_request_status(
     request_id: str, status: str, *, access: AccessContext, ctx: Context
 ) -> dict:
@@ -175,7 +179,7 @@ def update_request_status(
 
 
 @mcp.tool()
-@auth.grant([API, USERINFO])
+@auth.grant([API, USERINFO], request_scopes={USERINFO: "email"})
 def set_request_priority(
     request_id: str, priority: str, *, access: AccessContext, ctx: Context
 ) -> dict:
@@ -195,7 +199,7 @@ def set_request_priority(
 
 
 @mcp.tool()
-@auth.grant([API, USERINFO])
+@auth.grant([API, USERINFO], request_scopes={USERINFO: "email"})
 def delete_request(request_id: str, *, access: AccessContext, ctx: Context) -> dict:
     """Delete a request from the dashboard. Only the requester may delete it."""
     try:
@@ -211,7 +215,7 @@ def delete_request(request_id: str, *, access: AccessContext, ctx: Context) -> d
 
 
 @mcp.tool()
-@auth.grant([API, USERINFO])
+@auth.grant([API, USERINFO], request_scopes={USERINFO: "email"})
 def reassign_request(
     request_id: str, assignee: str, *, access: AccessContext, ctx: Context
 ) -> dict:

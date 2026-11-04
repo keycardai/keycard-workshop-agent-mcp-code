@@ -43,11 +43,16 @@ def get_request(request_id: str) -> dict:
 
 
 @mcp.tool()
-def create_request(title: str, priority: str = "normal", assignee: str = "") -> dict:
-    """File a new request on the dashboard. Priority is low, normal, or high;
-    assignee is an email address."""
+def create_request(
+    title: str, description: str = "", priority: str = "normal", assignee: str = ""
+) -> dict:
+    """File a new request on the dashboard. Title is a short label; description
+    says what is needed and why. Priority is low, normal, or high; assignee is
+    an email address."""
     try:
-        return storage.create_request({"title": title, "priority": priority, "assignee": assignee})
+        return storage.create_request(
+            {"title": title, "description": description, "priority": priority, "assignee": assignee}
+        )
     except DashboardError as exc:
         return {"error": "dashboard_error", "detail": str(exc)}
 

@@ -36,14 +36,19 @@ def make_request_tools(settings: Settings) -> list[BaseTool]:
         return _call("get_request", {"request_id": request_id})
 
     @tool
-    def create_request(title: str, priority: str = "normal", assignee: str = "") -> str:
-        """File a new request on the dashboard. Priority is low, normal, or high.
+    def create_request(
+        title: str, description: str = "", priority: str = "normal", assignee: str = ""
+    ) -> str:
+        """File a new request on the dashboard. Title is a short label, a few
+        words naming what is asked for; description says what is needed and
+        why, in the user's own terms. Priority is low, normal, or high.
         assignee is an email address, or empty to leave it unassigned; if the
         user gives a name instead, resolve it to an email and confirm before
-        filing, and never file an invented address. Say why in the title; if
-        the user hasn't said why, ask before filing, and never invent a reason."""
+        filing, and never file an invented address. If the user hasn't said
+        why, ask before filing, and never invent a reason."""
         return _call(
-            "create_request", {"title": title, "priority": priority, "assignee": assignee}
+            "create_request",
+            {"title": title, "description": description, "priority": priority, "assignee": assignee},
         )
 
     @tool
