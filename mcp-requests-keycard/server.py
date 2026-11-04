@@ -1,9 +1,10 @@
 """The requests MCP server: the team's shared queue of asks.
 
 Protected with Keycard. Every call arrives with a delegated token naming the
-real user, so the dashboard can enforce what the API key never could: you create
-requests as yourself, the requester and assignee may move a request's status,
-and only the requester may change its priority, delete it, or reassign it.
+real user, so this server can enforce what the API key never could, and tell
+the dashboard who filed each request: you create requests as yourself, the
+requester and assignee may move a request's status, and only the requester may
+change its priority, delete it, or reassign it.
 """
 
 import os
@@ -35,8 +36,12 @@ def _env(name: str) -> str:
 ZONE_URL = _env("KEYCARD_ZONE_URL").rstrip("/")
 
 # The resource this server exchanges the caller's token for; must match the
-# identifier registered in Keycard byte-for-byte.
+# identifier registered in Keycard byte-for-byte. Each tool asks for the
+# scopes its calls need and no more: the API checks requests:read on every
+# GET and requests:write on everything else, and Keycard grants whatever is
+# asked, so this is where narrowness comes from.
 API = _env("REQUESTS_API_RESOURCE")
+READ = {API: "requests:read"}
 
 # The zone's userinfo endpoint doubles as a registered resource: granting it
 # mints a credential that endpoint accepts. Discovered once at boot; the
@@ -49,6 +54,11 @@ except OAuthError as exc:
 USERINFO = _metadata.userinfo_endpoint
 if not USERINFO:
     raise SystemExit(f"{ZONE_URL} publishes no userinfo_endpoint; check KEYCARD_ZONE_URL")
+# Writes also need the caller's email: for ownership here, and to name the
+# requester to the API, whose tokens carry no email. The tools that look a
+# row up before changing it read and write on one credential.
+WRITE = {API: "requests:write", USERINFO: "email"}
+MODIFY = {API: ["requests:read", "requests:write"], USERINFO: "email"}
 
 # One AuthProvider does both jobs: it verifies the delegated token on the way
 # in, and it holds the server's own credential for the exchanges each tool's
@@ -81,11 +91,12 @@ def _credential(access: AccessContext) -> str:
 
 
 def _caller(access: AccessContext, ctx: Context) -> str:
-    """The caller's email, for ownership checks against the dashboard's rows.
-    Zone access tokens are authorization-only, so the email usually lives
-    behind the zone's userinfo endpoint, reached with the credential the
-    tool's grant minted. Ownership hangs on this answer, so a failure stops
-    the call instead of guessing who is asking."""
+    """The caller's email, for ownership checks against the dashboard's rows
+    and as the requester the API records. Zone access tokens are
+    authorization-only, so the email usually lives behind the zone's userinfo
+    endpoint, reached with the credential the tool's grant minted. Ownership
+    hangs on this answer, so a failure stops the call instead of guessing who
+    is asking."""
     user = ctx.request_context.request.user
     claims = get_claims(user.access_token) if getattr(user, "access_token", None) else {}
     if claims.get("email"):
@@ -118,7 +129,7 @@ def _forbidden(request_id: str, owner: str, caller: str, action: str) -> dict:
 
 
 @mcp.tool()
-@auth.grant(API)
+@auth.grant(API, request_scopes=READ)
 def list_requests(*, access: AccessContext, ctx: Context) -> list[dict] | dict:
     """List every request on the team dashboard, with requester, assignee,
     priority, and status."""
@@ -129,7 +140,7 @@ def list_requests(*, access: AccessContext, ctx: Context) -> list[dict] | dict:
 
 
 @mcp.tool()
-@auth.grant(API)
+@auth.grant(API, request_scopes=READ)
 def get_request(request_id: str, *, access: AccessContext, ctx: Context) -> dict:
     """Look up one request by id, e.g. REQ-1042."""
     try:
@@ -139,7 +150,7 @@ def get_request(request_id: str, *, access: AccessContext, ctx: Context) -> dict
 
 
 @mcp.tool()
-@auth.grant([API, USERINFO], request_scopes={USERINFO: "email"})
+@auth.grant([API, USERINFO], request_scopes=WRITE)
 def create_request(
     title: str, description: str = "", priority: str = "normal", assignee: str = "",
     *, access: AccessContext, ctx: Context,
@@ -159,7 +170,7 @@ def create_request(
 
 
 @mcp.tool()
-@auth.grant([API, USERINFO], request_scopes={USERINFO: "email"})
+@auth.grant([API, USERINFO], request_scopes=MODIFY)
 def update_request_status(
     request_id: str, status: str, *, access: AccessContext, ctx: Context
 ) -> dict:
@@ -179,7 +190,7 @@ def update_request_status(
 
 
 @mcp.tool()
-@auth.grant([API, USERINFO], request_scopes={USERINFO: "email"})
+@auth.grant([API, USERINFO], request_scopes=MODIFY)
 def set_request_priority(
     request_id: str, priority: str, *, access: AccessContext, ctx: Context
 ) -> dict:
@@ -199,7 +210,7 @@ def set_request_priority(
 
 
 @mcp.tool()
-@auth.grant([API, USERINFO], request_scopes={USERINFO: "email"})
+@auth.grant([API, USERINFO], request_scopes=MODIFY)
 def delete_request(request_id: str, *, access: AccessContext, ctx: Context) -> dict:
     """Delete a request from the dashboard. Only the requester may delete it."""
     try:
@@ -215,7 +226,7 @@ def delete_request(request_id: str, *, access: AccessContext, ctx: Context) -> d
 
 
 @mcp.tool()
-@auth.grant([API, USERINFO], request_scopes={USERINFO: "email"})
+@auth.grant([API, USERINFO], request_scopes=MODIFY)
 def reassign_request(
     request_id: str, assignee: str, *, access: AccessContext, ctx: Context
 ) -> dict:

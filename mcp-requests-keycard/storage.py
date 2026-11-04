@@ -7,7 +7,6 @@ dashboard is process-local and empty at startup, so the repo runs offline.
 
 import os
 import threading
-from urllib.parse import quote, urlencode
 
 import httpx
 
@@ -16,41 +15,13 @@ class DashboardError(Exception):
     """A dashboard failure the agent can relay in plain words."""
 
 
-def _require(name: str) -> str:
-    value = os.environ.get(name, "").strip()
-    if not value:
-        raise DashboardError(f"{name} is not set; copy mcp-requests/.env.example to .env")
-    return value
-
-
 def _authorization_needed() -> str:
     """The consent-class exchange failure, phrased for the person who can fix
-    it: only an interactive authorization can create or revive the caller's
-    grant, so the error carries the authorizer link when one is configured.
-    """
-    message = (
-        "The requests API isn't authorized to act on your behalf yet, or the "
-        "authorization expired."
-    )
-    base = os.environ.get("AUTHORIZER_URL", "").strip().rstrip("/")
-    if not base:
-        return (
-            message + " Ask an instructor about the authorizer page, then "
-            "refresh the dashboard or try again."
-        )
-    # Name the zone, client id, and resource explicitly instead of leaning on
-    # the page's baked-in defaults.
-    query = [
-        ("zone", _require("KEYCARD_ZONE_URL")),
-        ("client_id", os.environ.get("AUTHORIZER_CLIENT_ID", "").strip()),
-        ("resource", _require("REQUESTS_API_RESOURCE")),
-    ]
-    link = f"{base}/?{urlencode([(k, v) for k, v in query if v], quote_via=quote)}"
-    # The link goes last with nothing after it: renderers pull trailing
-    # punctuation into URLs, and a stray comma joins the resource identifier.
+    it: signing in to the agent again is the remedy, so say that plainly."""
     return (
-        f"{message} Refresh the dashboard or send your request again after "
-        f"authorizing access here: {link}"
+        "The token exchange for the requests API was refused because your "
+        "authorization is missing or expired. Sign in to the agent again and "
+        "approve access, then retry. If it keeps happening, flag an instructor."
     )
 
 
@@ -138,7 +109,9 @@ def get_request(request_id: str, credential: str | None = None) -> dict:
 
 def create_request(fields: dict, identity: str | None = None, credential: str | None = None) -> dict:
     if _api_url():
-        return _call("POST", "/requests", credential, body=fields)
+        # The token names the user by id, not email, so the requester travels
+        # in the body; the API records it as the row's owner.
+        return _call("POST", "/requests", credential, body={**fields, "requester": identity or ""})
     return _local_create(fields, identity)
 
 
