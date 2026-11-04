@@ -50,9 +50,8 @@ the starter antipattern Chapter 2 tears out.
 The attendee's own LLM key starts in `agent/.env` and moves into the Keycard
 vault in Chapter 4, fetched per call by the agent as itself.
 
-The closing beat revokes the shared requests API key live. A finished chain
-never notices. Anyone still on starter
-wiring breaks, and that is deliberate. Finished reference trees exist for
+By the end, nothing in a finished chain uses the shared requests API key, so
+revoking it would break only starter wiring. Finished reference trees exist for
 everything the chapters edit: `agent-keycard/` for the agent and
 `mcp-requests-keycard/` for the requests MCP server.
 
@@ -165,7 +164,7 @@ follows the same shape:
 | 6 | code | Per-call exchange as the signed-in user. The first dashboard call hits the consent horizon and fails; the authorizer page records the missing grant and the chain heals. Then ownership rules light up. | Sign in, ask for the dashboard (first call fails with an authorizer link, expected). Authorize at the page, retry. Then: file a request in their own words; delete a neighbor's (refused, names the owner); delete your own (works); reassign your own to a neighbor (works); reassign a neighbor's (refused, names the owner). | The first call raises the authorizer banner; after authorizing, real data flows and the banner clears. Panel rows carry real names; a neighbor's delete or reassign is refused by name while their own goes through. | "Whose identity does the reassignment write carry, and why does the same move on a neighbor's request get refused?" |
 | 7 | code + console | On its own: after each filed request, the agent reviews it as itself. The model maps the title to a standard catalog item; the requests API approves only agent-approvable items, under the agent's identity. Then the audit log. | "Read access to Confluence: onboarding docs for our new hire", then "Admin access to Jira to set up our team board". | The first is approved in the same turn, with Approved item and the app's URN as approver; the second stays open because the API refused it (needs a person). The audit log shows one `client_credentials` issuance for Requests API (Integrations) with no user, beside the two-hop user chain. | "The model recommended both. Who decided, and from what?" |
 | 8 | concepts | Map the three templates onto the attendee's own systems: `agent/llm.py` (as itself, from the vault), `agent/tools/requests_queue.py` (on behalf of the user), `agent/review.py` (as itself, against an API). No code. | n/a | They can name their first real resource, the template it takes, and the provider type it needs. | "Org-level secret, per-user data, or agent-run with no user: which shape does your resource need?" |
-| 9 | walkthrough | The finished trees, end to end. | Free play. | Everything above, at once; the instructor revokes the shared API key live and nothing they built notices.| none |
+| 9 | walkthrough | The finished trees, end to end. | Free play. | Everything above, at once; nothing they built still uses the shared API key.| none |
 
 Respect dependencies: Chapter 4 needs Chapter 3's credentials and its own
 console registration first; Chapter 6 needs Chapter 5's sign-in and Chapter

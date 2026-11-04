@@ -2,9 +2,8 @@
 
 Run a local LangChain agent against a shared team request dashboard over
 MCP, then give every hop a real identity through
-[Keycard](https://keycard.ai). The closing chapter revokes the shared API key
-live, and the finished stack keeps working: by then every access
-is minted per call and audited.
+[Keycard](https://keycard.ai). By the end, nothing in the chain uses the
+shared API key: every access is minted per call and audited.
 
 The workshop guide lives at
 **[keycard-workshop-agent-mcp-docs.fly.dev](https://keycard-workshop-agent-mcp-docs.fly.dev)**;
