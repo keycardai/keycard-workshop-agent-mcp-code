@@ -57,7 +57,7 @@ def load_settings() -> Settings:
         ).strip().rstrip("/"),
         requests_api_integrations=env(
             "REQUESTS_API_INTEGRATIONS",
-            "https://keycard-workshop-requests-api.fly.dev/integrations",
+            "urn:keycard-workshop:requests:api:integrations",
         ).strip(),
         agent_port=int(env("AGENT_PORT", "8484")),
     )
