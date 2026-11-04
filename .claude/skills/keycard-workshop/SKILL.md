@@ -1,11 +1,11 @@
 ---
 name: keycard-workshop
 description: >-
-  Guided co-pilot for the Keycard workshop (desk assistant + two MCP
-  servers + shared request dashboard), invoked from inside the cloned
+  Guided co-pilot for the Keycard workshop (desk assistant + requests MCP
+  server + shared request dashboard), invoked from inside the cloned
   keycard-workshop-agent-mcp-code repo. Use when the attendee wants to build a chapter,
   or signals confusion, breakage, or orientation need. Triggers: "help me
-  build this chapter", "do chapter N", "protect the directory", "where am I",
+  build this chapter", "do chapter N", "protect the MCP server", "where am I",
   "what chapter", "is my checkpoint right", "I'm stuck", "why is this
   failing", "I'm getting <error>", "reset / start over", "catch me up".
   Builds WITH the attendee one chapter at a time, in order; never runs ahead,
@@ -38,73 +38,97 @@ screens, so you ask them to look and report, and you never assume success.
 The attendee runs two local processes in two shells: the requests MCP
 server (`mcp-requests/server.py`, serving `http://localhost:8300/mcp`) and
 the agent (`python -m agent`, chat page on `http://localhost:8484` with a
-live "Request queue" panel). Two instructor-hosted services complete the
-system, and the attendee never runs or edits either one:
+live "Request queue" panel). One instructor-hosted service completes the
+system, and the attendee never runs or edits it: the **requests API** at
+`https://keycard-workshop-requests-api.fly.dev`. People reach it with
+Ping-issued JWTs. Agents acting as themselves reach its approve route with
+tokens Keycard mints for the "Requests API (Integrations)" resource, which is
+Chapter 7's reviewer. During the workshop it also accepts the shared
+`REQUESTS_API_KEY` from `mcp-requests/.env`, sent as `X-API-Key`; that key is
+the starter antipattern Chapter 2 tears out.
 
-- The **directory MCP server** at `https://keycard-workshop-directory-mcp.fly.dev/mcp`
-  authenticates callers with a bearer key from a key set. Chapter 0 has
-  everyone type the same shared guest key (handed out at the start) into
-  `agent/.env` as `DIRECTORY_KEY`; Chapter 3 moves the agent onto a second
-  key it fetches per call from the Keycard vault (resource
-  `urn:keycard-workshop:directory:key`), authenticating as itself. The hosted
-  URL is not a Keycard resource, and the vault key's value never ships to
-  attendees.
-- The **requests API** at `https://keycard-workshop-requests-api.fly.dev` is
-  protected by Ping-issued JWTs. During the workshop it also accepts the
-  shared `REQUESTS_API_KEY` from `mcp-requests/.env`, sent as `X-API-Key`;
-  that key is the starter antipattern Chapter 1 tears out.
+The attendee's own LLM key starts in `agent/.env` and moves into the Keycard
+vault in Chapter 4, fetched per call by the agent as itself.
 
-The closing beat revokes both shared keys live: the guest directory key and
-the requests API key. A finished chain never notices. Anyone still on starter
-wiring breaks, and that is deliberate. Finished reference trees exist for
+By the end, nothing in a finished chain uses the shared requests API key, so
+revoking it would break only starter wiring. Finished reference trees exist for
 everything the chapters edit: `agent-keycard/` for the agent and
 `mcp-requests-keycard/` for the requests MCP server.
+
+---
+
+## Know who you're guiding
+
+Every attendee registers name-specific values in Keycard, and the guide site
+personalizes its placeholders once they enter their first and last name in
+the "Personalize the workshop guide" box (chapters 0, 3, 4, and 7). The
+console entries, `agent/.env`, the docs, and your guidance must all carry one
+spelling, byte-for-byte. Establish the name before you reference any
+name-specific value:
+
+- If `AGENT_RESOURCE` is set in `agent/.env`, it is ground truth:
+  `urn:keycard-workshop:agent:resource:<slug>` carries the slug they
+  registered in Chapter 3. Read the slug from there and confirm the display
+  name once ("that makes you Kim Maida, yes?").
+- Otherwise, ask upfront for their **first and last name**, and have them
+  enter the exact same name in the guide's personalization box if they
+  haven't already, so the values you give them and the values the docs and
+  copy buttons give them never diverge.
+
+Derive values with the same rules the docs use. Slug: transliterate accented
+letters to their base letter (NFKD: strip the combining marks), lowercase,
+and drop every remaining character that is not a-z or 0-9 ("Kim Maida"
+becomes `kimmaida`; "José García" becomes `josegarcia`). Display names keep
+the name as typed ("Agent Resource - Kim Maida"). Where the docs show
+`<yourname>`, use the slug; where they show `<Your name>`, use the typed
+name. A name mismatch between the console
+registration and `.env` shows up later as `invalid_target` or a Chapter 5
+sign-in failure, so when you find a typo, fix it at whichever source was
+registered first and bring everything else in line with it.
 
 ---
 
 ## Capability 1: Orient ("where am I?")
 
 Run this first whenever a build is requested. Read the signals together and
-state a range honestly. Chapter 1 secures the requests MCP server first, so
-it leaves the earliest code trace; Chapter 2's register-and-config work shows
-up only in `agent/.env`, and Chapter 6 (observe) leaves no code trace at all,
-so read those two from `.env` and from what the attendee reports.
+state a range honestly. Chapter 2 secures the requests MCP server first, so
+it leaves the earliest code trace; Chapter 1 (the console tour) leaves no
+trace anywhere, Chapter 3's register-and-config work shows up only in
+`agent/.env`, and Chapters 8 and 9 change no code, so read those from `.env`
+and from what the attendee reports.
 
 Start with the working tree:
 
 | Working-tree signal | Code is at the end of |
 |---|---|
-| `TODO(ch01)` in `mcp-requests/server.py` and `storage.py`; no `from keycardai.fastmcp import AuthProvider` import on the server | Chapter 0 (Chapter 1 not started) |
-| `mcp-requests/server.py` protected with `AuthProvider`, and `storage.py`'s `_headers` exchanges the caller's token (no `TODO(ch01)`); `TODO(ch03)` still in `agent/tools/directory.py` | Chapter 1 or Chapter 2 (Chapter 2 is console + `.env` only; use the `.env` tie-breakers to split them) |
-| `_credential` in `agent/tools/directory.py` minting a client credentials grant for the vault key (no `TODO(ch03)`); `TODO(ch04)` still in `agent/web.py` and no `agent/keycard/` | Chapter 3 |
-| `agent/keycard/login.py` exists and `agent/web.py` has no `TODO(ch04)`; `TODO(ch05)` still in `agent/tools/requests_queue.py` | Chapter 4 |
-| `exchange(settings, settings.requests_mcp)` in `agent/tools/requests_queue.py` (no `TODO(ch05)`); `agent/llm.py` still reads the key from the environment | Chapter 5 or Chapter 6 (Chapter 6 is console-only, so it leaves no code trace) |
-| `_api_key` in `agent/llm.py` minting a client credentials grant for the LLM key resource | Chapter 7 or Chapter 8 (Chapter 8 is a walkthrough, so it changes no code) |
+| `TODO(ch02)` in `mcp-requests/server.py` and `storage.py`; no `from keycardai.mcp.server.auth import AuthProvider` import on the server | Chapter 0 or 1 (the tour leaves no code trace; Chapter 2 not started) |
+| `mcp-requests/server.py` protected with `AuthProvider`, and `storage.py`'s `_headers` exchanges the caller's token (no `TODO(ch02)`); `TODO(ch04)` still in `agent/llm.py` | Chapter 2 or Chapter 3 (Chapter 3 is console + `.env` only; use the `.env` tie-breakers to split them) |
+| `_api_key` in `agent/llm.py` fetching the LLM key from the vault as the agent itself (no `TODO(ch04)`); `TODO(ch05)` still in `agent/web.py` and no `agent/keycard/` | Chapter 4 |
+| `agent/keycard/login.py` exists and `agent/web.py` has no `TODO(ch05)` (it passes `shared_middleware` and your `KeycardIdentity` to every run); `TODO(ch06)` still in `agent/tools/requests_queue.py` | Chapter 5 |
+| `get_access_context` in `agent/tools/requests_queue.py` (no `TODO(ch06)`); `TODO(ch07)` still in `agent/review.py` | Chapter 6 |
+| `agent/review.py` has no `TODO(ch07)` (it asks Keycard for a token as the agent itself and calls the approve route) | Chapter 7, 8, or 9 (Chapters 8 and 9 change no code) |
 
-**`.env` tie-breakers:** `MODEL` and `DIRECTORY_KEY` set mean Chapter 0's env
-step is done. `AGENT_RESOURCE` set together with `KEYCARD_ZONE_URL`,
-`KEYCARD_CLIENT_ID`, and `KEYCARD_CLIENT_SECRET` means Chapter 2 is done, and
+**`.env` tie-breakers:** `MODEL` set means Chapter 0's env step is done. `REQUESTS_API_KEY` gone from `mcp-requests/.env` means Chapter
+2's last step is done (Chapter 2 deletes the line, not just the code that
+read it). `AGENT_RESOURCE` set together with `KEYCARD_ZONE_URL`,
+`KEYCARD_CLIENT_ID`, and `KEYCARD_CLIENT_SECRET` means Chapter 3 is done, and
 only half of that chapter is visible to you; the other half is the app and
-resource pair in the console, so ask. `DIRECTORY_KEY` stays in `.env` for
-good; Chapter 3 stops sending it rather than deleting it, so its presence
-proves nothing past Chapter 0. `LLM_KEY_RESOURCE` set and the provider API key
-line gone mean Chapter 7's env step is done; the console half (their own vault
-resource plus the dependency) you must ask about.
+resource pair in the console, so ask. `LLM_KEY_RESOURCE` set and the provider
+API key line gone mean Chapter 4's env step is done; the console half (their
+own vault resource plus the dependency) you must ask about.
 
-**Probe behavior** for what the filesystem cannot show. A directory 401
-means the key in flight is wrong or revoked: before Chapter 3 that is the
-shared guest key (mistyped, or the late-workshop revocation already
-happened), while from Chapter 3 on the agent fetches the vault key per call
-and the guest revocation cannot touch it. A dashboard question failing with an
-authorization error while signed in means Chapter 1's protection is applied
-but Chapter 5's exchange is not. `python -m agent check` verifies the
-environment wiring (Chapter 2).
+**Probe behavior** for what the filesystem cannot show. A chat turn that
+answers "Configuration error: LLM_KEY_RESOURCE..." means Chapter 4's `llm.py`
+is in place without that chapter's console and `.env` steps. A dashboard questionfailing with an
+authorization error while signed in means Chapter 2's protection is applied
+but Chapter 6's exchange is not. `python -m agent check` verifies the
+environment wiring (Chapter 3).
 
 Report the detected range, the matching checkpoint (`starter`,
-`ch03-agent-as-itself`, `ch04-user-login`, `ch05-on-behalf-of`,
+`ch04-agent-as-itself`, `ch05-user-login`, `ch06-on-behalf-of`,
 `finished`), and the next doc page to open. The agent checkpoints cover the
-agent only; a Chapter 1 or 2 range maps to the `starter` agent checkpoint,
-because the agent's code is untouched until Chapter 3 and Chapter 1's work
+agent only; a Chapter 1, 2, or 3 range maps to the `starter` agent checkpoint,
+because the agent's code is untouched until Chapter 4 and Chapter 2's work
 lives in the (un-checkpointed) `mcp-requests/` tree.
 
 ## Capability 2: Build (apply the current chapter via its playbook)
@@ -116,9 +140,8 @@ follows the same shape:
 2. **Apply the canonical `<AgentPrompt>`**, read verbatim from the chapter's
    page on the guide site,
    `https://keycard-workshop-agent-mcp-docs.fly.dev/chapters/NN-<slug>/`
-   (fetch it; the slugs match the sidebar). Chapters 2 and 6 are
-   console-only and have no `<AgentPrompt>`; there you walk their console
-   steps with the attendee instead. Apply prompts verbatim; never
+   (fetch it; the slugs match the sidebar). Chapters 1, 3, 8, and 9 have no
+   `<AgentPrompt>`; there you walk their steps with the attendee instead. Apply prompts verbatim; never
    improvise or gold-plate. The chapter's ```python fences are the
    parity-tested source of truth (an authoring check proves they
    rebuild the finished trees); the `<AgentPrompt>` boxes are ```text,
@@ -132,30 +155,33 @@ follows the same shape:
 
 | Ch | Type | Stakes | Test prompt (attendee runs) | Observe | The one pause |
 |---|---|---|---|---|---|
-| 0 | setup | Two processes, two shared keys, no individuals: the directory answers anyone holding the shared guest key, and the whole cohort reads, writes, and deletes each other's requests as `api-key`. | A request of their own invention ("File a <priority> request to <anything>"; never hand them one to copy), then "delete <a random REQ-id they did not file>", then "what are the request dashboard's access rules right now?" | The shared dashboard fills with `api-key` rows; deleting someone else's ticket works; races land as "already deleted", which is expected. | "Who does the dashboard think did all of this, and what would an audit find?" |
-| 1 | console + code | Tour what instructors pre-registered (the "Requests MCP Resource" and "Requests API" resources, the "Directory MCP key" vault resource, the "Requests MCP Actor" application), then protect the requests MCP server AND replace its downstream API key with a per-call token exchange that carries the caller's identity. | The tour is n/a. After the edits: restart the requests MCP server, then ask the agent a dashboard question. | The tour recap checklist; then the server refuses anonymous calls, `storage.py` holds no API key, the agent's dashboard tools return authorization errors (expected until Chapter 5), and directory still works. The instructor connects a stock MCP client and works the dashboard as a named person; **People** → (person) → **Grants** shows the delegated grant for the requests API afterward. | "The requests MCP server is both a resource and an application: whose credentials perform the downstream exchange, and who stays the subject?" |
-| 2 | console + config | Register your own pair: the resource "Agent Resource - <Name>", then the application "Agent App - <Name>" that provides it, issue its credentials, wire them into `agent/.env`, and prove the connection with the preflight. That provides line is what will make Chapter 5's exchange legal. | `python -m agent check` | All five PASS lines. In the console: the app carries redirect `http://localhost:8484/callback`, consent Required, provides their resource, and depends on three: their own resource, "Directory MCP key", and "Requests MCP Resource". Pickers show display names only, so the naming convention is how they find theirs. `AGENT_RESOURCE`, `KEYCARD_ZONE_URL`, `KEYCARD_CLIENT_ID`, and `KEYCARD_CLIENT_SECRET` land in `agent/.env`. | "Provide what you host, depend on what you request tokens for: why is your own resource on both lines?" |
-| 3 | code | The agent retires the shared guest key and fetches the directory's vault key as itself, per call: a client credentials grant, no user. | A directory question, before and after the edit. | Answers look identical (the vault key actually shows a little more); the audit log now carries one application-only issuance on the vault key per call, and `DIRECTORY_KEY` sits unsent in `.env`. | "There is no user in this chain. Why is that correct here and wrong for the dashboard?" |
-| 4 | code | Sign in as yourself; the agent holds proof of who is driving, audienced to your own agent resource. | Click Sign in, approve the consent screen. | Header shows email and groups; consent named the dependency closure: their agent resource, the vault key, and the requests MCP resource. The request queue panel still reports the dashboard failure from Chapter 1 (expected until Chapter 5). | "Only the app that provides a token's audience may exchange it onward: which Chapter 2 line made your app that provider?" |
-| 5 | code | Per-call exchange as the signed-in user. The first dashboard call hits the consent horizon and fails; the authorizer page records the missing grant and the chain heals. Then ownership rules light up. | Sign in, ask for the dashboard (first call fails with an authorizer link, expected). Authorize at the page, retry. Then: file a request in their own words; delete a neighbor's (refused, names the owner); delete your own (works); reassign your own to a neighbor (works); reassign a neighbor's (refused, names the owner). | The first call raises the authorizer banner; after authorizing, real data flows and the banner clears. Panel rows carry real names; a neighbor's delete or reassign is refused by name while their own goes through. | "Whose identity does the reassignment write carry, and why does the same move on a neighbor's request get refused?" |
-| 6 | console | Read the audit log: your no-user directory chain and your two-hop user chain, set beside the instructor's one-hop stock-client chain from Chapter 1. | n/a (first generate a little traffic: a directory question and a couple of dashboard actions). | A directory issuance with no user; a dashboard issuance with you as subject through two applications (your app, then the Requests MCP Actor) to the requests API. **People** → your name → **Grants** holds `user × requests API`. | "Point at the hop where the user's identity could have been lost, and why it wasn't." |
-| 7 | code + console | Map the two tool files onto the attendee's own resources, then prove the vault pattern on the one secret they brought: they register their own vault resource (`urn:keycard-workshop:llm:key:<yourname>`) holding their LLM API key, add it to their app's dependencies, set `LLM_KEY_RESOURCE`, delete the provider key line from `agent/.env`, and swap `agent/llm.py` to fetch the key per turn. | A question after the provider key line is gone from `agent/.env`. | The agent still answers with no provider key on disk; the audit log shows an application-only issuance for their LLM key resource on every chat turn. | "Org-level data or per-user data: which shape does your resource need?" |
-| 8 | walkthrough | The finished trees, end to end. | Free play. | Everything above, at once; the instructor revokes both shared keys live and nothing they built notices. | none |
+| 0 | setup | Two processes, one shared key, no individuals: the whole cohort reads, writes, and deletes each other's requests as `api-key`. | A request of their own invention, with a reason ("File a <priority> request for <anything> because <why>"; never hand them one to copy), then "delete <a random REQ-id they did not file>". | The shared dashboard fills with `api-key` rows; deleting someone else's ticket works; races land as "already deleted", which is expected. | "Who does the dashboard think did all of this, and what would an audit find?" |
+| 1 | console | Tour what instructors pre-registered: the "Requests MCP Resource", "Requests API", and "Requests API (Integrations)" resources, the "Requests MCP Actor" application, the providers, the people, and the default policies. Nothing is enforced on their running processes yet. | n/a (a console walk; you cannot see it, so have them narrate each stop). | They can find each sidebar section, point at the two-hop requests chain, and trace the Actor's provides-and-depends wiring; Sessions and Grants under their own name are empty. | "The requests MCP server is both a resource and an application: why does it appear in both lists?" |
+| 2 | code | Protect the requests MCP server AND replace its downstream API key with a per-call token exchange that carries the caller's identity, on the provides-and-depends wiring from the tour. | After the edits: restart the requests MCP server, then ask the agent a dashboard question. | The server refuses anonymous calls, `storage.py` holds no API key, the agent's dashboard tools return authorization errors (expected until Chapter 6), and plain chat still works. The instructor connects a stock MCP client and works the dashboard as a named person; **People** → (person) → **Grants** shows the delegated grant for the requests API afterward. | "Whose credentials perform the downstream exchange, and who stays the subject?" |
+| 3 | console + config | Register your own pair: the resource "Agent Resource - <Your name>", then the application "Agent App - <Your name>" that provides it, issue its credentials, wire them into `agent/.env`, and prove the connection with the preflight. That provides line is what will make Chapter 6's exchange legal. | `python -m agent check` | All four PASS lines. In the console: the app carries redirect `http://localhost:8484/callback`, consent Required, provides their resource, and depends on their own resource, "Requests MCP Resource", and "Requests API (Integrations)".Pickers show display names only, so the naming convention is how they find theirs. `AGENT_RESOURCE`, `KEYCARD_ZONE_URL`, `KEYCARD_CLIENT_ID`, and `KEYCARD_CLIENT_SECRET` land in `agent/.env`. | "Provide what you host, depend on what you request tokens for: why is your own resource on both lines?" |
+| 4 | code + console | The LLM key moves into the Keycard vault: they register `LLM Key - <Your name>` (`urn:keycard-workshop:llm:key:<yourname>`, Zone Vault Provider) holding their key, add it to their app's dependencies, set `LLM_KEY_RESOURCE`, swap `agent/llm.py` to fetch the key per turn as the agent itself, then delete the provider key line from `agent/.env`. | A question before and after the provider key line is deleted. | The agent still answers with no provider key on disk; the audit log shows one application-only issuance for their LLM key resource per chat turn. | "There is no user in this chain. Why is that correct for a model key and wrong for the dashboard?" |
+| 5 | code | Sign in as yourself; the agent holds proof of who is driving, audienced to your own agent resource. | Click Sign in, approve the consent screen. | Header shows email and groups; consent named the dependency closure: their agent resource, their LLM key, the requests MCP resource, and Requests API (Integrations). The request queue panel still reports the dashboard failure from Chapter 2 (expected until Chapter 6). | "Only the app that provides a token's audience may exchange it onward: which Chapter 3 line made your app that provider?" |
+| 6 | code | Per-call exchange as the signed-in user. The first dashboard call hits the consent horizon and fails; the authorizer page records the missing grant and the chain heals. Then ownership rules light up. | Sign in, ask for the dashboard (first call fails with an authorizer link, expected). Authorize at the page, retry. Then: file a request in their own words; delete a neighbor's (refused, names the owner); delete your own (works); reassign your own to a neighbor (works); reassign a neighbor's (refused, names the owner). | The first call raises the authorizer banner; after authorizing, real data flows and the banner clears. Panel rows carry real names; a neighbor's delete or reassign is refused by name while their own goes through. | "Whose identity does the reassignment write carry, and why does the same move on a neighbor's request get refused?" |
+| 7 | code + console | On its own: after each filed request, the agent reviews it as itself. The model maps the title to a standard catalog item; the requests API approves only agent-approvable items, under the agent's identity. Then the audit log. | "Read access to Confluence: onboarding docs for our new hire", then "Admin access to Jira to set up our team board". | The first is approved in the same turn, with Approved item and the app's URN as approver; the second stays open because the API refused it (needs a person). The audit log shows one `client_credentials` issuance for Requests API (Integrations) with no user, beside the two-hop user chain. | "The model recommended both. Who decided, and from what?" |
+| 8 | concepts | Map the three templates onto the attendee's own systems: `agent/llm.py` (as itself, from the vault), `agent/tools/requests_queue.py` (on behalf of the user), `agent/review.py` (as itself, against an API). No code. | n/a | They can name their first real resource, the template it takes, and the provider type it needs. | "Org-level secret, per-user data, or agent-run with no user: which shape does your resource need?" |
+| 9 | walkthrough | The finished trees, end to end. | Free play. | Everything above, at once; nothing they built still uses the shared API key.| none |
 
-Respect dependencies: Chapter 3 needs Chapter 2's credentials; Chapter 5
-needs Chapter 4's sign-in and Chapter 1's protection; Chapter 7's vault fetch
-needs Chapter 2's credentials and its own console registration first. **Build
+Respect dependencies: Chapter 4 needs Chapter 3's credentials and its own
+console registration first; Chapter 6 needs Chapter 5's sign-in and Chapter
+2's protection; Chapter 7 needs Chapter 3's "Requests API (Integrations)"
+dependency and a working Chapter 6 (the reviewer runs after a filed request).**Build
 only the current or immediate-next chapter, never ahead.** Jumps go through
 `python scripts/restore_checkpoint.py <name>`.
 
 ## Capability 3: Diagnose (map known failures, stop on unknowns)
 
 **First, is this even a failure?** Several results *are the lesson*: the
-Chapter 0 chaos (including "already deleted" races), Chapter 1's
-post-protection dashboard failures that stand until Chapter 5's exchange, the
-first dashboard call after Chapter 5's edits failing with the authorizer
-link (expected; authorize once there and retry), Chapter 5's ownership
-refusals naming the owner (delete and reassign alike), and the closing
+Chapter 0 chaos (including "already deleted" races), Chapter 2's
+post-protection dashboard failures that stand until Chapter 6's exchange, the
+first dashboard call after Chapter 6's edits failing with the authorizer
+link (expected; authorize once there and retry), Chapter 6's ownership
+refusals naming the owner (delete and reassign alike), Chapter 7's "needs a
+person" refusal on a request outside the agent's catalog, and the closing
 revocation breaking anyone still on a starter key. If the
 reported result is the documented payoff, say which mechanism fired and why,
 and **stop**. Never debug an intended wall, and never retry or escalate scopes
@@ -168,33 +194,35 @@ them to an instructor, and do not guess. Start from this seed index:
 
 | Symptom | Likely cause | Anchor |
 |---|---|---|
-| `invalid_target` on any credential request | a resource identifier is not byte-identical to its registration: `DIRECTORY_KEY_RESOURCE`, `REQUESTS_MCP`, or `LLM_KEY_RESOURCE` in `agent/.env`, or `REQUESTS_API_RESOURCE` in `mcp-requests/.env` (an `AGENT_RESOURCE` mismatch surfaces earlier, as a Chapter 4 sign-in failure) | Ch. 1, 2, and 7 |
-| Every chat turn answers "Configuration error: LLM_KEY_RESOURCE..." | Chapter 7's `llm.py` is in place (often via the `finished` checkpoint) without the chapter's console and `.env` steps | Ch. 7 |
-| Directory questions return 401 | wrong or revoked key: before Chapter 3, check `DIRECTORY_KEY` (and expect this for the whole cohort once the guest key is revoked); from Chapter 3 on, the vault path is unaffected by that revocation, so check the `KEYCARD_*` credentials instead | Ch. 0 and 3 |
+| `invalid_target` on any credential request | a resource identifier is not byte-identical to its registration: `REQUESTS_MCP`, `LLM_KEY_RESOURCE`, or `REQUESTS_API_INTEGRATIONS` in `agent/.env`, or `REQUESTS_API_RESOURCE` in `mcp-requests/.env` (an `AGENT_RESOURCE` mismatch surfaces earlier, as a Chapter 5 sign-in failure) | Ch. 2, 3, 4, and 7 |
+| Every chat turn answers "Configuration error: LLM_KEY_RESOURCE..." | Chapter 4's `llm.py` is in place (often via a checkpoint) without the chapter's console and `.env` steps | Ch. 4 |
+| A filed request stays open and the reply says the review failed | the app is missing its "Requests API (Integrations)" dependency, `REQUESTS_API_URL` or `REQUESTS_API_INTEGRATIONS` doesn't match, or the hosted API is down | Ch. 7 |
 | Dashboard tools fail with connection errors | the requests MCP server is not running on 8300, the port is taken, or the hosted requests API is down for the whole cohort | Ch. 0 |
-| Dashboard fails while signed in, and the reply or banner carries a `keycard-authorizer.fly.dev` link or "isn't authorized to act on your behalf" | Chapter 5's consent-horizon wall: the delegated `user × requests API` grant is missing; visit the link once, approve, retry | Ch. 5 |
-| Directory works, dashboard fails while signed in, and no authorizer link appears | Chapter 1's protection applied without Chapter 5's exchange, which is expected; otherwise consent was declined | Ch. 5 |
-| Dashboard fails for starter-wired attendees at the close | the instructor revoked the shared API key (expected) | Ch. 5 |
+| Dashboard fails while signed in, and the reply or banner carries a `keycard-authorizer.fly.dev` link or "isn't authorized to act on your behalf" | Chapter 6's consent-horizon wall: the delegated `user × requests API` grant is missing; visit the link once, approve, retry | Ch. 6 |
+| Plain chat works, dashboard fails while signed in, and no authorizer link appears | Chapter 2's protection applied without Chapter 6's exchange, which is expected; otherwise consent was declined | Ch. 6 |
+| Dashboard fails for starter-wired attendees at the close | the instructor revoked the shared API key (expected) | Ch. 6 |
 | Dashboard fails for everyone at once | the hosted dashboard is down | Ch. 0 |
-| Sign-in parks on a Keycard error page | redirect URI mismatch with the registered `http://localhost:8484/callback`, or a policy denial | Ch. 4 |
-| Reassigning a neighbor's request refused | the requester-only ownership wall; the refusal names the owner and is working as designed | Ch. 5 |
+| Sign-in parks on a Keycard error page | redirect URI mismatch with the registered `http://localhost:8484/callback`, or a policy denial | Ch. 5 |
+| Reassigning a neighbor's request refused | the requester-only ownership wall; the refusal names the owner and is working as designed | Ch. 6 |
+| A filed request stays open with "needs a person" | the catalog item isn't one an agent may approve; the API refused the agent, working as designed | Ch. 7 |
 
 ## Capability 4: Recover (get unstuck without spoiling)
 
-`python scripts/restore_checkpoint.py [starter|ch03-agent-as-itself|ch04-user-login|ch05-on-behalf-of|finished]`
+`python scripts/restore_checkpoint.py [starter|ch04-agent-as-itself|ch05-user-login|ch06-on-behalf-of|finished]`
 resets `agent/` only and never touches `.env`; the `finished` target restores
-from `agent-keycard/`. `finished` includes Chapter 7's vault-backed `llm.py`,
-so restoring it before that chapter's console and `.env` steps leaves every
-chat turn answering with a configuration error; jump to `ch05-on-behalf-of`
-instead when the attendee has not done Chapter 7. The requests MCP server has
+from `agent-keycard/`. Every checkpoint from `ch04-agent-as-itself` on
+includes Chapter 4's vault-backed `llm.py`, so restoring one before that
+chapter's console and `.env` steps leaves every chat turn answering with a
+configuration error; do Chapter 4's console and `.env` steps first, or restore
+`starter`, which reads the provider key from `.env`. The requests MCP server has
 no checkpoints: reset it by copying `server.py` and `storage.py` from
 `mcp-requests-keycard/` over their `mcp-requests/` counterparts (the method
 the guide's checkpoints page,
 `https://keycard-workshop-agent-mcp-docs.fly.dev/reference/checkpoints/`,
 sanctions), and only fall
 back to reverting `mcp-requests/` from git for
-attendees who cloned the repo that way. The hosted directory and requests API
-belong to the instructors; you reset neither. **Never silently rewrite work
+attendees who cloned the repo that way. The hosted requests API belongs to
+the instructors; you never reset it.**Never silently rewrite work
 to a known-good state without saying what diverged.** Concept questions defer
 to the chapter prose.
 
@@ -214,12 +242,12 @@ to the chapter prose.
 6. **Never guess.** Explain and stop on an intended payoff, name the cause
    and anchor on a known failure, and send unknowns to an instructor.
 7. **Be honest about blind spots:** you cannot see the console, the zone, or
-   the hosted directory and dashboard, so ask the attendee to look and report.
+   the hosted dashboard, so ask the attendee to look and report.
 8. **Stay on the SDK rails:** never hand-roll token exchange or JWT
    verification (always `keycardai.*`); never cache an exchanged or minted
    credential; always pass `resource` as the exact registered string; if
    Keycard auth fails, fail loudly. Per-call issuance is the value being
    taught, so never "optimize" it away.
 9. **The shared dashboard is shared.** Deleting other people's requests is part
-   of Chapter 0 and refused from Chapter 5 on; never help an attendee work
+   of Chapter 0 and refused from Chapter 6 on; never help an attendee work
    around an ownership refusal.

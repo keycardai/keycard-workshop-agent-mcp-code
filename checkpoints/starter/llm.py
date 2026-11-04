@@ -6,6 +6,8 @@ from .config import MissingConfig, Settings, require
 
 def get_llm(settings: Settings) -> BaseChatModel:
     model = require(settings.model, "MODEL")
+    # TODO(ch04): the provider key is a static secret in agent/.env, read by
+    # init_chat_model. Chapter 4 moves it into the Keycard vault.
     try:
         return init_chat_model(model)
     except Exception as exc:

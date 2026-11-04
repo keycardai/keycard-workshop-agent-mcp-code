@@ -9,14 +9,16 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, StreamingResponse
-from langchain_core.messages import AIMessageChunk, BaseMessage, HumanMessage
+from keycardai.langchain import KeycardIdentity
+from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage, HumanMessage
 from pydantic import BaseModel
 
 from .config import MissingConfig, load_settings
-from .graph import build_agent
+from .graph import build_agent, shared_middleware
 from .keycard.login import router as keycard_router
-from .keycard.tokens import store
+from .keycard.tokens import NotLoggedIn, store
 from .llm import get_llm
+from .review import review_filed
 from .tools import get_tools
 from .tools.requests_queue import REQUEST_TOOLS
 
@@ -28,26 +30,21 @@ app.include_router(keycard_router)
 
 INDEX = Path(__file__).resolve().parent / "index.html"
 
-# One user, one process, memory only. The lock keeps a second browser tab
+# One user, one process, memory only; the lock keeps a second browser tab
 # from interleaving turns.
 messages: list[BaseMessage] = []
 chat_lock = threading.Lock()
 
-# The dashboard view the page's panel shows: seeded on page load, folded forward
-# after every streamed step, kept across resets. panel_error is the last fetch
-# failure in plain words, or None while the view is honest.
+# The panel's dashboard view; panel_error is the last fetch failure in plain words.
 panel_view: list[dict] = []
 panel_error: str | None = None
 
 def panel_records(
     history: list[BaseMessage], base: list[dict]
 ) -> tuple[list[dict], bool]:
-    """Fold the request tools' JSON output onto base, the latest known dashboard
-    view: a full listing replaces it, a single request merges in by "id".
-    The page never fetches the dashboard itself; everything it shows went
-    through the agent's tools (dashboard_snapshot seeds the page load). The
-    second element reports whether any real dashboard data arrived, the cue
-    that a standing panel error is stale.
+    """Fold the request tools' JSON output onto base: a full listing replaces
+    it, a single request merges in by "id". The second element reports whether
+    any real dashboard data arrived.
     """
     records = list(base)
     saw_data = False
@@ -73,23 +70,22 @@ def panel_records(
 
 
 def dashboard_snapshot() -> tuple[list[dict] | None, str | None]:
-    """The dashboard, fetched through the agent's own listing tool so each
-    chapter's credential story applies unchanged. None records means the
-    fetch failed, and the second element says why in the tool's own words;
-    an authorization failure names its fix, and the page shows that instead
-    of passing an empty dashboard off as the truth.
+    """The dashboard, fetched through the same governed tool the agent uses
+    in chat: grant() serves the tool's access context outside a run. None
+    means the fetch failed; the second element says why.
     """
-    lister = next((t for t in tools if t.name == "list_requests"), None)
-    if lister is None:
-        return None, None
     try:
+        keycard = shared_middleware(settings)
+        identity = KeycardIdentity(subject_token=store.user_token)
+    except (MissingConfig, NotLoggedIn) as exc:
+        return None, f"Authorization error: {exc}"
+    lister = next(t for t in tools if t.name == "list_requests")
+    with keycard.grant(identity, tool_name="list_requests"):
         raw = lister.invoke({})
-    except Exception:
-        return None, "Could not reach the request dashboard."
     try:
         data = json.loads(raw)
     except ValueError:
-        # Tool failures arrive as plain sentences ("Authorization error: ...").
+        # Failures arrive as plain sentences ("Authorization error: ...").
         return None, str(raw)
     if isinstance(data, list) and all(isinstance(r, dict) and "id" in r for r in data):
         return data, None
@@ -110,44 +106,49 @@ def index() -> FileResponse:
 @app.post("/chat")
 def chat(body: ChatRequest) -> StreamingResponse:
     # The page gates itself behind sign-in; this backstop covers everything
-    # that isn't the page. No user, no agent: there is nobody to act for.
-    if store.claims() is None:
-        def refusal():
-            yield json.dumps(
-                {"reply": "No one is signed in. Sign in first.",
-                 "records": panel_view, "error": panel_error}
-            ) + "\n"
-        return StreamingResponse(refusal(), media_type="application/x-ndjson")
+    # that isn't the page. With nobody signed in, there's nobody to act for.
+    try:
+        subject_token = store.user_token
+    except NotLoggedIn as exc:
+        refusal = {"reply": str(exc), "records": panel_view, "error": panel_error}
+        return StreamingResponse(
+            iter([json.dumps(refusal) + "\n"]), media_type="application/x-ndjson"
+        )
 
     def events():
         global messages, panel_view, panel_error
         with chat_lock:
-            # Assembled per turn: nothing the model holds outlives the request.
+            # Built per turn: nothing the model holds outlives the request.
             try:
+                llm = get_llm(settings)
                 agent = build_agent(
-                    get_llm(settings),
+                    llm,
                     tools,
-                    identity=store.identity() if store.claims() else None,
+                    identity=store.identity(),
+                    keycard=shared_middleware(settings),
                 )
             except MissingConfig as exc:
                 yield json.dumps(
                     {"reply": f"Configuration error: {exc}", "records": panel_view}
                 ) + "\n"
                 return
-            # "messages" streams tokens to the page; "values" refreshes the
-            # panel after each tool result. The turn joins the history only
-            # once the model finishes, so a failed call leaves nothing behind.
+            # The turn joins the history only once the model finishes, so a
+            # failed call leaves nothing behind.
             turn = messages + [HumanMessage(body.message)]
             streaming_id = None
             for mode, payload in agent.stream(
-                {"messages": turn}, stream_mode=["messages", "values"]
+                {"messages": turn},
+                # Who this run acts for: the middleware takes your session
+                # token to Keycard before each tool call.
+                context=KeycardIdentity(subject_token=subject_token),
+                stream_mode=["messages", "values"],
             ):
                 if mode == "messages":
                     chunk, _ = payload
                     if not isinstance(chunk, AIMessageChunk) or not chunk.text:
                         continue
-                    # A new model step (after a tool call) starts the bubble
-                    # over: only the final step's text is the reply.
+                    # A new model step starts the bubble over; only the final
+                    # step's text is the reply.
                     if chunk.id != streaming_id:
                         if streaming_id is not None:
                             yield json.dumps({"restart": True}) + "\n"
@@ -155,19 +156,23 @@ def chat(body: ChatRequest) -> StreamingResponse:
                     yield json.dumps({"delta": str(chunk.text)}) + "\n"
                 else:
                     turn = payload["messages"]
-                    # Fold this turn's new tool results onto the latest known
-                    # view; earlier turns are already in. Real data arriving
-                    # means any standing panel error has been outlived.
+                    # Fold only this turn's new tool results; earlier turns
+                    # are already in.
                     panel_view, saw_data = panel_records(turn[len(messages):], panel_view)
                     if saw_data:
                         panel_error = None
                     if turn[-1].type == "ai" and turn[-1].tool_calls:
                         for call in turn[-1].tool_calls:
                             yield json.dumps({"tool": call["name"]}) + "\n"
+            reply = str(turn[-1].text)
+            # Chapter 7: the agent reviews each request this turn filed, as itself.
+            panel_view, note = review_filed(turn[len(messages):], panel_view, llm, settings)
+            if note:
+                reply += f"\n\n{note}"
+                turn = turn + [AIMessage(note)]
             messages = turn
             yield json.dumps(
-                {"reply": str(messages[-1].text), "records": panel_view,
-                 "error": panel_error}
+                {"reply": reply, "records": panel_view, "error": panel_error}
             ) + "\n"
 
     return StreamingResponse(events(), media_type="application/x-ndjson")
@@ -180,9 +185,8 @@ def panel() -> dict:
 
 @app.post("/panel/refresh")
 def refresh_panel() -> dict:
-    """The page's refresh button: re-snapshot the dashboard and make that the
-    panel's latest known view. A failed fetch keeps the current one and
-    reports why it can't be trusted."""
+    """Re-snapshot the dashboard; a failed fetch keeps the current view and
+    reports why."""
     global panel_view, panel_error
     fresh, panel_error = dashboard_snapshot()
     if fresh is not None:
@@ -193,16 +197,14 @@ def refresh_panel() -> dict:
 @app.get("/history")
 def history() -> dict:
     global panel_view, panel_error
-    # Final replies only: the live view clears tool-calling interludes, so
-    # they must not reappear on refresh.
+    # Final replies only: tool-calling interludes must not reappear on refresh.
     turns = [
         {"role": "you" if m.type == "human" else "agent", "text": m.text}
         for m in messages
         if m.text and (m.type == "human" or m.type == "ai" and not m.tool_calls)
     ]
-    # Every page load re-reads the dashboard, so the panel reflects the world
-    # as it stands now (an authorization granted since the last error clears
-    # it), not the last thing that happened to this process.
+    # Re-read the dashboard on every page load, so an authorization granted
+    # since the last error clears it.
     fresh, panel_error = dashboard_snapshot()
     if fresh is not None:
         panel_view = fresh
@@ -211,8 +213,7 @@ def history() -> dict:
 
 @app.post("/reset")
 def reset() -> dict:
-    """Clear the chat. Sign-in and the panel survive; the dashboard outlives
-    conversations."""
+    """Clear the chat; the panel survives, the dashboard outlives conversations."""
     global messages
     with chat_lock:
         messages = []
@@ -228,11 +229,11 @@ def me() -> dict:
 
 
 def serve() -> None:
-    # Fail before uvicorn does, with a message that says what to do about it.
+    # Probe the port first so a conflict fails with a message that says what
+    # to do about it. Match uvicorn's SO_REUSEADDR so TIME_WAIT sockets don't
+    # read as a conflict; skip it on Windows, where the flag would let the
+    # probe bind straight over a still-running agent.
     probe = socket.socket()
-    # Match uvicorn's SO_REUSEADDR so TIME_WAIT sockets from a just-closed
-    # run don't read as a conflict. Skip it on Windows, where the flag would
-    # let the probe bind straight over a still-running agent.
     if os.name != "nt":
         probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
@@ -247,6 +248,6 @@ def serve() -> None:
         probe.close()
 
     print(f"Agent running. Open http://localhost:{settings.agent_port}")
-    # One process, one worker: the token store and conversation live in module
-    # memory. Passing the app object (not an import string) keeps reload off.
+    # One worker: state lives in module memory. Passing the app object
+    # (not an import string) keeps reload off.
     uvicorn.run(app, host="127.0.0.1", port=settings.agent_port, log_level="warning")
