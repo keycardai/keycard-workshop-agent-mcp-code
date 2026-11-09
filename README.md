@@ -21,8 +21,7 @@ start there with **Prerequisites**.
 | `scripts/` | `restore_checkpoint.py`, for catching up from a checkpoint |
 
 The hosted service has no folder here. Instructors run the shared requests
-API at `https://keycard-workshop-requests-api.fly.dev`; attendees never run or
-edit it.
+API at `REQUESTS_API_URL`; attendees never run or edit it.
 
 ## How to run
 

@@ -48,3 +48,5 @@ def _check_credentials(settings: Settings) -> None:
 def _check_requests(settings: Settings) -> None:
     # Any HTTP answer proves the server is up; a 401 means it's already protected.
     httpx.get(settings.requests_mcp)
+    # Chapter 7's reviewer calls the API behind it directly; the URL is pre-filled.
+    require(settings.requests_api_url, "REQUESTS_API_URL")

@@ -40,7 +40,7 @@ server (`mcp-requests/server.py`, serving `http://localhost:8300/mcp`) and
 the agent (`python -m agent`, chat page on `http://localhost:8484` with a
 live "Request queue" panel). One instructor-hosted service completes the
 system, and the attendee never runs or edits it: the **requests API** at
-`https://keycard-workshop-requests-api.fly.dev`. People reach it through the
+`REQUESTS_API_URL` (pre-filled in both `.env.example` files). People reach it through the
 requests MCP server, with Keycard-issued tokens for the
 `urn:keycard-workshop:requests:api` resource, scoped `requests:read` or
 `requests:write`. Agents acting as themselves reach its approve route with

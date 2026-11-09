@@ -8,6 +8,7 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 
 _SET_IN_CHAPTER = {
     "MODEL": "Chapter 0",
+    "REQUESTS_API_URL": "Chapter 0",
     "AGENT_RESOURCE": "Chapter 3",
     "KEYCARD_ZONE_URL": "Chapter 3",
     "KEYCARD_CLIENT_ID": "Chapter 3",
@@ -52,9 +53,7 @@ def load_settings() -> Settings:
         requests_mcp=env("REQUESTS_MCP", "http://localhost:8300/mcp").strip(),
         # Chapter 7's reviewer calls the requests API directly, as the agent
         # itself, with a token Keycard mints for the API's Integrations resource.
-        requests_api_url=env(
-            "REQUESTS_API_URL", "https://keycard-workshop-requests-api.fly.dev"
-        ).strip().rstrip("/"),
+        requests_api_url=env("REQUESTS_API_URL", "").strip().rstrip("/"),
         requests_api_integrations=env(
             "REQUESTS_API_INTEGRATIONS",
             "urn:keycard-workshop:requests:api:integrations",
