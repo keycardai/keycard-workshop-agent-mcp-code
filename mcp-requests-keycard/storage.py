@@ -1,12 +1,10 @@
 """Storage for the request dashboard.
 
-With REQUESTS_API_URL set (the workshop default), every operation goes to
-the hosted requests API that the whole cohort shares. Without it, the
-dashboard is process-local and empty at startup, so the repo runs offline.
+Every operation goes to the hosted requests API that the whole cohort
+shares; REQUESTS_API_URL in .env says where.
 """
 
 import os
-import threading
 
 import httpx
 
@@ -32,7 +30,10 @@ def _headers(credential: str | None) -> dict:
 
 
 def _api_url() -> str:
-    return os.environ.get("REQUESTS_API_URL", "").strip().rstrip("/")
+    url = os.environ.get("REQUESTS_API_URL", "").strip().rstrip("/")
+    if not url:
+        raise DashboardError("REQUESTS_API_URL is not set; copy the value from your instructors into mcp-requests/.env")
+    return url
 
 
 def _call(method: str, path: str, credential: str | None, body: dict | None = None) -> dict | list:
@@ -60,74 +61,23 @@ def _call(method: str, path: str, credential: str | None, body: dict | None = No
     return response.json()
 
 
-# The offline dashboard: same shape as the API's rows, empty until someone
-# creates a request. A lock keeps concurrent tool calls consistent.
-_local: list[dict] = []
-_local_lock = threading.Lock()
-_local_seq = 1000
-
-
-def _local_create(fields: dict, identity: str | None) -> dict:
-    global _local_seq
-    with _local_lock:
-        _local_seq += 1
-        row = {
-            "id": f"REQ-{_local_seq}",
-            "title": fields["title"],
-            "description": fields.get("description", ""),
-            "requester": identity or "api-key",
-            "assignee": fields.get("assignee", ""),
-            "priority": fields.get("priority", "normal"),
-            "status": "open",
-            "due": fields.get("due"),
-            "created_at": "",
-        }
-        _local.append(row)
-        return row
-
-
-def _local_find(request_id: str) -> dict:
-    for row in _local:
-        if row["id"] == request_id:
-            return row
-    raise DashboardError(f"{request_id} does not exist (already deleted?).")
-
-
 def list_requests(credential: str | None = None) -> list[dict]:
-    if _api_url():
-        return _call("GET", "/requests", credential)
-    with _local_lock:
-        return [dict(row) for row in _local]
+    return _call("GET", "/requests", credential)
 
 
 def get_request(request_id: str, credential: str | None = None) -> dict:
-    if _api_url():
-        return _call("GET", f"/requests/{request_id}", credential)
-    with _local_lock:
-        return dict(_local_find(request_id))
+    return _call("GET", f"/requests/{request_id}", credential)
 
 
 def create_request(fields: dict, identity: str | None = None, credential: str | None = None) -> dict:
-    if _api_url():
-        # The token names the user by id, not email, so the requester travels
-        # in the body; the API records it as the row's owner.
-        return _call("POST", "/requests", credential, body={**fields, "requester": identity or ""})
-    return _local_create(fields, identity)
+    # The token names the user by id, not email, so the requester travels
+    # in the body; the API records it as the row's owner.
+    return _call("POST", "/requests", credential, body={**fields, "requester": identity or ""})
 
 
 def update_request(request_id: str, fields: dict, credential: str | None = None) -> dict:
-    if _api_url():
-        return _call("PATCH", f"/requests/{request_id}", credential, body=fields)
-    with _local_lock:
-        row = _local_find(request_id)
-        row.update({k: v for k, v in fields.items() if v is not None})
-        return dict(row)
+    return _call("PATCH", f"/requests/{request_id}", credential, body=fields)
 
 
 def delete_request(request_id: str, credential: str | None = None) -> dict:
-    if _api_url():
-        return _call("DELETE", f"/requests/{request_id}", credential)
-    with _local_lock:
-        row = _local_find(request_id)
-        _local.remove(row)
-        return dict(row)
+    return _call("DELETE", f"/requests/{request_id}", credential)

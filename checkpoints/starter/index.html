@@ -408,7 +408,7 @@
     // An application identifier, shown as a name with the identifier beside it.
     agentField: "approved_by",
     agentIdPrefix: "urn:keycard-workshop:agent:app:",
-    agentLabel: "Request Agent - ",
+    agentLabel: "Agent App - ",
     personFields: ["requester", "assignee"],
     statusField: "status",
     statusTone: { open: "warn", in_progress: "dim", done: "ok", approved: "ok" },
@@ -519,24 +519,10 @@
     summary.textContent = "";
     panelBody.textContent = "";
     if (error) {
-      // The dashboard's failure in its own words, above whatever view is
-      // left. URLs become links, so an authorization error carries its fix.
+      // The dashboard's failure in its own words, above whatever view is left.
       const note = document.createElement("div");
       note.className = "panel-error";
-      let last = 0;
-      for (const match of error.matchAll(/https?:\/\/\S+/g)) {
-        // Prose punctuation isn't part of the URL; leave it as text.
-        const url = match[0].replace(/[.,;:)\]]+$/, "");
-        note.append(error.slice(last, match.index));
-        const link = document.createElement("a");
-        link.href = url;
-        link.target = "_blank";
-        link.rel = "noopener";
-        link.textContent = url.split("?")[0];
-        note.append(link);
-        last = match.index + url.length;
-      }
-      note.append(error.slice(last));
+      note.textContent = error;
       panelBody.appendChild(note);
     }
     if (!records || !records.length) {

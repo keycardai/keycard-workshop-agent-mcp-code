@@ -100,7 +100,7 @@ def _caller(access: AccessContext, ctx: Context) -> str:
     user = ctx.request_context.request.user
     claims = get_claims(user.access_token) if getattr(user, "access_token", None) else {}
     if claims.get("email"):
-        return claims["email"]
+        return claims["email"].lower()
     error = access.get_resource_error(USERINFO)
     if error is not None:
         detail = error.get("description") or error.get("message") or error.get("code")
@@ -115,7 +115,7 @@ def _caller(access: AccessContext, ctx: Context) -> str:
             "Keycard's userinfo endpoint returned no email for you "
             f"(claims: {', '.join(sorted(info.claims)) or 'none'})."
         )
-    return info.claims["email"]
+    return info.claims["email"].lower()
 
 
 def _forbidden(request_id: str, owner: str, caller: str, action: str) -> dict:

@@ -80,8 +80,11 @@ def dashboard_snapshot() -> tuple[list[dict] | None, str | None]:
     except (MissingConfig, NotLoggedIn) as exc:
         return None, f"Authorization error: {exc}"
     lister = next(t for t in tools if t.name == "list_requests")
-    with keycard.grant(identity, tool_name="list_requests"):
-        raw = lister.invoke({})
+    try:
+        with keycard.grant(identity, tool_name="list_requests"):
+            raw = lister.invoke({})
+    except Exception:
+        return None, "Could not reach the request dashboard."
     try:
         data = json.loads(raw)
     except ValueError:
