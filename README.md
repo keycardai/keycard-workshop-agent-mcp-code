@@ -41,3 +41,10 @@ On Windows, activate with `.\.venv\Scripts\Activate.ps1` instead. Each folder's
 settings in `agent/.env`. The
 [guide](https://keycard-workshop-agent-mcp-docs.fly.dev) walks through the
 rest in order.
+
+## License
+
+Apache-2.0 — see [LICENSE](LICENSE) and, for the copyright notice,
+[NOTICE](NOTICE). You are free to keep, modify and reuse the code you write
+during the workshop. The Keycard name and logo are trademarks;
+[TRADEMARKS.md](TRADEMARKS.md) states how they may be used.
