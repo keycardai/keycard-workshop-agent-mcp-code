@@ -29,7 +29,7 @@ def _headers(credential: str | None) -> dict:
 def _api_url() -> str:
     url = os.environ.get("REQUESTS_API_URL", "").strip().rstrip("/")
     if not url:
-        raise DashboardError("REQUESTS_API_URL is not set; copy the value from your instructors into mcp-requests/.env")
+        raise DashboardError("REQUESTS_API_URL is not set; copy the line from mcp-requests/.env.example into mcp-requests/.env")
     return url
 
 

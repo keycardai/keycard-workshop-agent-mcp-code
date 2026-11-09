@@ -111,9 +111,10 @@ Start with the working tree:
 | `agent/review.py` has no `TODO(ch07)` (it asks Keycard for a token as the agent itself and calls the approve route) | Chapter 7, 8, or 9 (Chapters 8 and 9 change no code) |
 
 **`.env` tie-breakers:** `MODEL` set means Chapter 0's env step is done.
-`mcp-requests/.env` must carry every value the instructors handed out:
-`REQUESTS_API_URL`, `REQUESTS_API_KEY`, `KEYCARD_ZONE_URL`,
-`REQUESTS_MCP_CLIENT_ID`, and `REQUESTS_MCP_CLIENT_SECRET`. An empty
+`mcp-requests/.env` carries the pre-filled values from `.env.example`
+(`REQUESTS_API_URL`, `KEYCARD_ZONE_URL`, `REQUESTS_MCP_CLIENT_ID`) plus the
+two secrets the instructors handed out (`REQUESTS_API_KEY`,
+`REQUESTS_MCP_CLIENT_SECRET`). An empty
 `REQUESTS_API_URL` makes every dashboard call fail with "REQUESTS_API_URL is
 not set", and an empty `KEYCARD_ZONE_URL` makes the Chapter 2 server exit at
 boot. `REQUESTS_API_KEY` gone from `mcp-requests/.env` means Chapter
@@ -216,7 +217,7 @@ them to an instructor, and do not guess. Start from this seed index:
 | `invalid_target` on any credential request | a resource identifier is not byte-identical to its registration: `REQUESTS_MCP`, `LLM_KEY_RESOURCE`, or `REQUESTS_API_INTEGRATIONS` in `agent/.env`, or `REQUESTS_API_RESOURCE` in `mcp-requests/.env` (an `AGENT_RESOURCE` mismatch shows up earlier, as a Chapter 5 sign-in failure) | Ch. 2, 3, 4, and 7 |
 | Every chat turn answers "Configuration error: LLM_KEY_RESOURCE..." | Chapter 4's `llm.py` is in place (often via a checkpoint) without the chapter's console and `.env` steps | Ch. 4 |
 | A filed request stays open and the reply says the review failed | the app is missing its "Requests API (Integrations)" dependency, `REQUESTS_API_URL` or `REQUESTS_API_INTEGRATIONS` doesn't match, or the hosted API is down | Ch. 7 |
-| Dashboard tools fail with connection errors, or every call says "REQUESTS_API_URL is not set" | the requests MCP server is not running on 8300, the port is taken, `mcp-requests/.env` is missing the instructors' `REQUESTS_API_URL`, or the hosted requests API is down for the whole cohort | Ch. 0 |
+| Dashboard tools fail with connection errors, or every call says "REQUESTS_API_URL is not set" | the requests MCP server is not running on 8300, the port is taken, `mcp-requests/.env` is missing the pre-filled `REQUESTS_API_URL`, or the hosted requests API is down for the whole cohort | Ch. 0 |
 | Plain chat works, dashboard fails while signed in | Chapter 2's protection applied without Chapter 6's exchange, which is expected; otherwise consent was declined | Ch. 6 |
 | Dashboard fails for everyone at once | the hosted dashboard is down | Ch. 0 |
 | Sign-in parks on a Keycard error page | redirect URI mismatch with the registered `http://localhost:8484/callback`, or a policy denial | Ch. 5 |
