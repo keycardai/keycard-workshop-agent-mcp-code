@@ -191,7 +191,7 @@ follows the same shape:
 Respect dependencies: Chapter 4 needs Chapter 3's credentials and its own
 console registration first; Chapter 6 needs Chapter 5's sign-in and Chapter
 2's protection; Chapter 7 needs Chapter 3's "Requests API (Integrations)"
-dependency and a working Chapter 6 (the reviewer runs after a filed request).**Build
+dependency and a working Chapter 6 (the reviewer runs after a filed request). **Build
 only the current or immediate-next chapter, never ahead.** Jumps go through
 `python scripts/restore_checkpoint.py <name>`.
 
@@ -240,7 +240,7 @@ the guide's checkpoints page,
 sanctions), and only fall
 back to reverting `mcp-requests/` from git for
 attendees who cloned the repo that way. The hosted requests API belongs to
-the instructors; you never reset it.**Never silently rewrite work
+the instructors; you never reset it. **Never silently rewrite work
 to a known-good state without saying what diverged.** Concept questions defer
 to the chapter prose.
 
