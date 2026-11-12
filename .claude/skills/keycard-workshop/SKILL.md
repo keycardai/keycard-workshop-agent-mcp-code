@@ -111,6 +111,9 @@ Start with the working tree:
 | `agent/review.py` has no `TODO(ch07)` (it asks Keycard for a token as the agent itself and calls the approve route) | Chapter 7, 8, or 9 (Chapters 8 and 9 change no code) |
 
 **`.env` tie-breakers:** `MODEL` set means Chapter 0's env step is done.
+`EMAIL_DOMAIN` still `example.com` in `agent/.env` means Chapter 0's domain
+step was skipped: have the attendee set it to their organization's email
+domain, or the agent guesses teammates' addresses at `example.com`.
 `mcp-requests/.env` carries the pre-filled values from `.env.example`
 (`REQUESTS_API_URL`, `KEYCARD_ZONE_URL`, `REQUESTS_MCP_CLIENT_ID`) plus the
 two secrets the instructors handed out (`REQUESTS_API_KEY`,
