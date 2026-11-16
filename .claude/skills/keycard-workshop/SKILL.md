@@ -35,13 +35,13 @@ screens, so you ask them to look and report, and you never assume success.
 
 ## Know the lay of the land
 
-The attendee runs two local processes, started together by double-clicking
-`start.bat` (Windows) or `start.command` (macOS) in the workshop folder; both
-run `scripts/start.py`, which sets up `.venv` on first run. The two are the
+The attendee runs two local processes, started together by
+`python scripts/start.py` (`python3` on macOS) from the workshop folder,
+which sets up `.venv` on first run. The two are the
 requests MCP server (`mcp-requests/server.py`, serving
 `http://localhost:8300/mcp`) and the agent (`python -m agent`, chat page on
 `http://localhost:8484` with a live "Request queue" panel). To restart, the
-attendee closes the start window and double-clicks the start file again.
+attendee presses Ctrl+C in that terminal and runs the command again.
 Commands you run yourself use `.venv`'s Python. One instructor-hosted service completes the
 system, and the attendee never runs or edits it: the **requests API** at
 `REQUESTS_API_URL` (pre-filled in both `.env.example` files). People reach it through the
@@ -176,8 +176,8 @@ follows the same shape:
    `.env` steps with the attendee from the page. Never improvise or
    gold-plate: the `<AgentPrompt>` describes the same edits the files
    contain, and if the two ever disagree, the files win.
-3. **Hand it back, hands-on:** the attendee restarts the workshop (close the start window, double-click
-   the start file again) and
+3. **Hand it back, hands-on:** the attendee restarts the workshop (Ctrl+C in the workshop terminal, then
+   the start command again) and
    runs the chapter's test prompt themselves.
 4. **Point at the observable payoff** and have them report what they see.
 5. **One confirmation pause** at the chapter's central concept.

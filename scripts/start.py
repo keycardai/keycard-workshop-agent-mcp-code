@@ -1,8 +1,9 @@
 """Start the workshop: the requests MCP server and the agent, together.
 
-start.bat (Windows) and start.command (macOS) run this file. The first run
+Run it from the workshop folder: python scripts/start.py (python3 on
+macOS and Linux). The first run
 creates .venv and installs the packages. Every run starts both processes,
-opens the chat page, and keeps them running until this window closes.
+opens the chat page, and keeps them running until Ctrl+C.
 """
 
 import os
@@ -48,11 +49,11 @@ def main() -> None:
                  f"This is Python {sys.version.split()[0]}.")
     if up():
         sys.exit(f"The workshop is already running at {URL}. "
-                 "To restart it, close its window first, then start again.")
+                 "To restart it, press Ctrl+C where it runs, then start again.")
     if not INSTALLED.exists():
         install()
 
-    # Closing the window or killing this script stops both processes too.
+    # Closing the terminal or killing this script stops both processes too.
     for name in ("SIGTERM", "SIGHUP", "SIGBREAK"):
         if hasattr(signal, name):
             signal.signal(getattr(signal, name), lambda *_: sys.exit(0))
@@ -71,7 +72,7 @@ def main() -> None:
                 time.sleep(1)
                 continue
             print(f"\nWorkshop running. Chat at {URL}\n"
-                  "To stop or restart, close this window.\n")
+                  "To stop, press Ctrl+C. To restart, press Ctrl+C and run this again.\n")
             webbrowser.open(URL)
             break
         while all(p.poll() is None for p in procs):
