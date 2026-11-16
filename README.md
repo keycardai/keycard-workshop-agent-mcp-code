@@ -25,7 +25,13 @@ API at `REQUESTS_API_URL`; attendees never run or edit it.
 
 ## How to run
 
-Run two local processes, each in its own shell with the venv active:
+Double-click `start.bat` (Windows) or `start.command` (macOS). The first run
+installs the packages into `.venv`. Every run starts the requests MCP server
+(port 8300) and the agent (http://localhost:8484), and opens the chat page.
+Close the window to stop both; double-click again to restart. On Linux, run
+`sh start.command`.
+
+To run them by hand instead, each in its own shell with the venv active:
 
 ```
 python -m venv .venv && source .venv/bin/activate
