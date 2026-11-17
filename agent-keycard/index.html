@@ -404,9 +404,9 @@
     columns: [["id", "ID", "key"], ["title", "title"], ["requester", "requester"], ["status", "status"]],
     // Lines under an opened row, in order. Empty values are skipped, except
     // person fields, which read "Unassigned".
-    details: [["description", "description"], ["assignee", "assignee"], ["catalog_item", "approved"], ["approved_by", "approved by"], ["approval_reason", "reason"]],
+    details: [["description", "description"], ["assignee", "assignee"], ["triage", "triage"], ["triaged_by", "triaged by"]],
     // An application identifier, shown as a name with the identifier beside it.
-    agentField: "approved_by",
+    agentField: "triaged_by",
     agentIdPrefix: "urn:keycard-workshop:agent:app:",
     agentLabel: "Agent App - ",
     personFields: ["requester", "assignee"],

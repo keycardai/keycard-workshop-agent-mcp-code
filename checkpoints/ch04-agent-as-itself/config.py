@@ -51,7 +51,7 @@ def load_settings() -> Settings:
         llm_key_resource=env("LLM_KEY_RESOURCE", "").strip(),
         agent_resource=env("AGENT_RESOURCE", "").strip(),
         requests_mcp=env("REQUESTS_MCP", "http://localhost:8300/mcp").strip(),
-        # Chapter 7's reviewer calls the requests API directly, as the agent
+        # Chapter 7's triage step calls the requests API directly, as the agent
         # itself, with a token Keycard mints for the API's Integrations resource.
         requests_api_url=env("REQUESTS_API_URL", "").strip().rstrip("/"),
         requests_api_integrations=env(

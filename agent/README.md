@@ -26,6 +26,6 @@ The requests MCP server must be running too (Chapter 0 starts it).
 | `llm.py` | The model, with its key fetched from the Keycard vault as the agent itself (Chapter 4) |
 | `keycard/` | The Keycard integration; doesn't exist yet, you create it in Chapter 5 |
 | `tools/requests_queue.py` | Request dashboard tools: the on-behalf-of pattern (Chapter 6) |
-| `review.py` | The request reviewer: approves standard requests as the agent itself (Chapter 7) |
+| `review.py` | The triage step: writes a note on each filed request, as the agent itself (Chapter 7) |
 | `tools/remote.py` | One short-lived MCP session per tool call (shared plumbing) |
 | `tools/__init__.py` | Tool registry, the swap point for your own resources |

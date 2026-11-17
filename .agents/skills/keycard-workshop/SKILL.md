@@ -47,9 +47,9 @@ system, and the attendee never runs or edits it: the **requests API** at
 `REQUESTS_API_URL` (pre-filled in both `.env.example` files). People reach it through the
 requests MCP server, with Keycard-issued tokens for the
 `urn:keycard-workshop:requests:api` resource, scoped `requests:read` or
-`requests:write`. Agents acting as themselves reach its approve route with
+`requests:write`. Agents acting as themselves reach its triage route with
 tokens Keycard mints for the "Requests API (Integrations)" resource, which is
-Chapter 7's reviewer. During the workshop it also accepts the shared
+Chapter 7's triage step. During the workshop it also accepts the shared
 `REQUESTS_API_KEY` from `mcp-requests/.env`, sent as `X-API-Key`; that key is
 the starter antipattern Chapter 2 tears out.
 
@@ -112,7 +112,7 @@ Start with the working tree:
 | `_api_key` in `agent/llm.py` fetching the LLM key from the vault as the agent itself (no `TODO(ch04)`); `TODO(ch05)` still in `agent/web.py` and no `agent/keycard/` | Chapter 4 |
 | `agent/keycard/login.py` exists and `agent/web.py` has no `TODO(ch05)` (it passes `shared_middleware` and your `KeycardIdentity` to every run); `TODO(ch06)` still in `agent/tools/requests_queue.py` | Chapter 5 |
 | `get_access_context` in `agent/tools/requests_queue.py` (no `TODO(ch06)`); `TODO(ch07)` still in `agent/review.py` | Chapter 6 |
-| `agent/review.py` has no `TODO(ch07)` (it asks Keycard for a token as the agent itself and calls the approve route) | Chapter 7, 8, or 9 (Chapters 8 and 9 change no code) |
+| `agent/review.py` has no `TODO(ch07)` (it asks Keycard for a token as the agent itself and calls the triage route) | Chapter 7, 8, or 9 (Chapters 8 and 9 change no code) |
 
 **`.env` tie-breakers:** `MODEL` set means Chapter 0's env step is done.
 `EMAIL_DOMAIN` still `example.com` in `agent/.env` means Chapter 0's domain
@@ -192,14 +192,14 @@ follows the same shape:
 | 4 | code + console | The LLM key moves into the Keycard vault: they register `LLM Key - <Your name>` (`urn:keycard-workshop:llm:key:<yourname>`, Zone Vault Provider) holding their key, add it to their app's dependencies, set `LLM_KEY_RESOURCE`, swap `agent/llm.py` to fetch the key per turn as the agent itself, then delete the provider key line from `agent/.env`. | A question before and after the provider key line is deleted. | The agent still answers with no provider key on disk; the audit log shows one application-only issuance for their LLM key resource per chat turn. | "There is no user in this chain. Why is that correct for a model key and wrong for the dashboard?" |
 | 5 | code | Sign in as yourself; the agent holds proof of who is driving, audienced to your own agent resource. | Click Sign in, approve the consent screen. | Header shows email and groups; consent named the dependency closure: their agent resource, their LLM key, the requests MCP resource, and Requests API (Integrations). The request queue panel still reports the dashboard failure from Chapter 2 (expected until Chapter 6). | "Only the app that provides a token's audience may exchange it onward: which Chapter 3 line made your app that provider?" |
 | 6 | code | Per-call exchange as the signed-in user. The first dashboard call works: the requests MCP server exchanges onward for the requests API with no second consent. Then ownership rules light up. | Sign in, ask for the dashboard (it loads on the first call). Then: file a request in their own words; delete a neighbor's (refused, names the owner); delete your own (works); file another request and reassign it to a neighbor (works); reassign a neighbor's (refused, names the owner). | Real data flows on the first call. Panel rows carry real names; a neighbor's delete or reassign is refused by name while their own goes through. The "Requests API" resource's **Activity** tab shows the downstream hop: subject still them, the "Requests MCP Actor" acting, scope exactly what the tool asked for. | "Whose identity does the reassignment write carry, and why does the same move on a neighbor's request get refused?" |
-| 7 | code + console | On its own: after each filed request, the agent reviews it as itself. The model maps the title to a standard catalog item; the requests API approves only agent-approvable items, under the agent's identity. Then the audit log. | "File a normal request for read access to Confluence, for the onboarding docs for our new hire.", then "File a normal request for admin access to Jira, to set up our team board." | The first is approved in the same turn; the opened row shows the catalog item and, as approver, "Agent App - <slug>" with the app's URN beside it; the second stays open because the API refused it (needs a person). The audit log shows one `client_credentials` issuance for Requests API (Integrations) with no user, beside the two-hop user chain. | "The model recommended both. Who decided, and from what?" |
+| 7 | code + console | On its own: after each filed request, the agent triages it and signs the note as itself, because the judgment is the agent's, not the user's. The note decides nothing; the requests API lets an agent write a note once per request and nothing else. Then the audit log. | "File a normal request for a webcam, because my laptop's camera is too dark for client calls.", then "File a normal request for read access to the payroll database." | Each reply ends with a triage note (kind, rough cost or sensitivity, whether the reason holds up, who should handle it); the opened row shows the note and, as triaged by, "Agent App - <slug>" with the app's URN beside it; status stays open. The payroll note flags sensitive data and a missing reason. The audit log shows one `client_credentials` issuance for Requests API (Integrations) with no user, beside the two-hop user chain. | "You filed it and your agent triaged it: why should the note carry the agent's identity rather than yours?" |
 | 8 | concepts | Map the three templates onto the attendee's own systems: `agent/llm.py` (as itself, from the vault), `agent/tools/requests_queue.py` (on behalf of the user), `agent/review.py` (as itself, against an API). No code. | n/a | They can name their first real resource, the template it takes, and the provider type it needs. | "Org-level secret, per-user data, or agent-run with no user: which shape does your resource need?" |
 | 9 | walkthrough | The finished trees, end to end. | Free play. | Everything above, at once; nothing they built still uses the shared API key. | none |
 
 Respect dependencies: Chapter 4 needs Chapter 3's credentials and its own
 console registration first; Chapter 6 needs Chapter 5's sign-in and Chapter
 2's protection; Chapter 7 needs Chapter 3's "Requests API (Integrations)"
-dependency and a working Chapter 6 (the reviewer runs after a filed request). **Build
+dependency and a working Chapter 6 (the triage step runs after a filed request). **Build
 only the current or immediate-next chapter, never ahead.** Jumps go through
 `python scripts/restore_checkpoint.py <name>`.
 
@@ -209,8 +209,7 @@ only the current or immediate-next chapter, never ahead.** Jumps go through
 Chapter 0 chaos (including "already deleted" races), Chapter 2's
 post-protection dashboard failures that stand until Chapter 6's exchange,
 Chapter 6's ownership refusals naming the owner (delete and reassign alike),
-and Chapter 7's "needs a person" refusal on a request outside the agent's
-catalog.
+and Chapter 7's open status after a triage note (the note decides nothing).
 If the reported result is the documented payoff, say which mechanism fired
 and why, and **stop**. Never debug an intended wall, and never retry or escalate scopes
 to route around one.
@@ -224,13 +223,12 @@ them to an instructor, and do not guess. Start from this seed index:
 |---|---|---|
 | `invalid_target` on any credential request | a resource identifier is not byte-identical to its registration: `REQUESTS_MCP`, `LLM_KEY_RESOURCE`, or `REQUESTS_API_INTEGRATIONS` in `agent/.env`, or `REQUESTS_API_RESOURCE` in `mcp-requests/.env` (an `AGENT_RESOURCE` mismatch shows up earlier, as a Chapter 5 sign-in failure) | Ch. 2, 3, 4, and 7 |
 | Every chat turn answers "Configuration error: LLM_KEY_RESOURCE..." | Chapter 4's `llm.py` is in place (often via a checkpoint) without the chapter's console and `.env` steps | Ch. 4 |
-| A filed request stays open and the reply says the review failed | the app is missing its "Requests API (Integrations)" dependency, `REQUESTS_API_URL` or `REQUESTS_API_INTEGRATIONS` doesn't match, or the hosted API is down | Ch. 7 |
+| A filed request has no triage note and the reply says the triage failed | the app is missing its "Requests API (Integrations)" dependency, `REQUESTS_API_URL` or `REQUESTS_API_INTEGRATIONS` doesn't match, or the hosted API is down | Ch. 7 |
 | Dashboard tools fail with connection errors, or every call says "REQUESTS_API_URL is not set" | the requests MCP server is not running on 8300, the port is taken, `mcp-requests/.env` is missing the pre-filled `REQUESTS_API_URL`, or the hosted requests API is down for the whole cohort | Ch. 0 |
 | Plain chat works, dashboard fails while signed in | Chapter 2's protection applied without Chapter 6's exchange, which is expected; otherwise consent was declined | Ch. 6 |
 | Dashboard fails for everyone at once | the hosted dashboard is down | Ch. 0 |
 | Sign-in parks on a Keycard error page | redirect URI mismatch with the registered `http://localhost:8484/callback`, or a policy denial | Ch. 5 |
 | Reassigning a neighbor's request refused | the requester-only ownership wall; the refusal names the owner and is working as designed | Ch. 6 |
-| A filed request stays open with "needs a person" | the catalog item isn't one an agent may approve; the API refused the agent, working as designed | Ch. 7 |
 
 ## Capability 4: Recover (get unstuck without spoiling)
 

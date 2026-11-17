@@ -29,6 +29,6 @@ folder directly: `python -m agent-keycard` (it reads `agent-keycard/.env`).
 | `keycard/login.py` | Browser sign-in routes (ships complete) |
 | `keycard/tokens.py` | The signed-in user's token store (ships complete) |
 | `tools/requests_queue.py` | Request dashboard tools: the on-behalf-of pattern (Chapter 6) |
-| `review.py` | The request reviewer: approves standard requests as the agent itself (Chapter 7) |
+| `review.py` | The triage step: writes a note on each filed request, as the agent itself (Chapter 7) |
 | `tools/remote.py` | One short-lived MCP session per tool call (shared plumbing) |
 | `tools/__init__.py` | Tool registry, the swap point for your own resources |
