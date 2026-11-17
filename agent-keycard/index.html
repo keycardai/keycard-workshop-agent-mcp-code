@@ -188,6 +188,18 @@
   }
   td.key { font-family: var(--mono); font-size: 13px; color: var(--text-dim); white-space: nowrap; }
   td.person { min-width: 150px; }
+  /* Click the ID to copy it. Plain text with a small icon, never wrapped. */
+  .copy {
+    all: unset;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+    cursor: copy;
+  }
+  .copy svg { flex: none; opacity: 0.55; }
+  .copy.copied svg { color: var(--ok); opacity: 1; }
+  .copy:focus-visible { text-decoration: underline; }
   .badge {
     font-family: var(--mono);
     font-size: 12px;
@@ -402,6 +414,8 @@
     emptyHint: "The dashboard is empty. Ask the agent to file a request.",
     placeholder: "Ask about the dashboard, or file a request",
     columns: [["id", "ID", "key"], ["title", "title"], ["requester", "requester"], ["status", "status"]],
+    // Clicking this column's value copies it, so an ID is quick to reuse in chat.
+    copyField: "id",
     // Lines under an opened row, in order. Empty values are skipped, except
     // person fields, which read "Unassigned".
     details: [["description", "description"], ["assignee", "assignee"], ["triage", "triage"], ["triaged_by", "triaged by"]],
@@ -415,6 +429,35 @@
     priorityField: "priority",
     priorityColumn: "title",
   };
+
+  const COPY_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+  const COPIED_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+
+  // A button that reads as plain text: click copies the value, and the
+  // icon turns into a check for a moment. The click never opens the row.
+  function copyButton(value) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "copy";
+    button.title = "Copy " + value;
+    const text = document.createElement("span");
+    text.textContent = value;
+    const icon = document.createElement("span");
+    icon.innerHTML = COPY_ICON;
+    icon.style.display = "inline-flex";
+    button.append(text, icon);
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (navigator.clipboard) navigator.clipboard.writeText(value).catch(() => {});
+      button.classList.add("copied");
+      icon.innerHTML = COPIED_ICON;
+      setTimeout(() => {
+        button.classList.remove("copied");
+        icon.innerHTML = COPY_ICON;
+      }, 1100);
+    });
+    return button;
+  }
 
   // Only priorities that deviate from the default get a mark; unknown values
   // are never rendered, so hostile dashboard data can't inject anything here.
@@ -569,6 +612,9 @@
           cell.textContent = personName(raw);
           cell.className = "person";
           if (cell.textContent !== raw) cell.title = raw;
+        } else if (key === DOMAIN.copyField) {
+          cell.appendChild(copyButton(record[key]));
+          if (cls) cell.className = cls;
         } else {
           cell.textContent = record[key];
           if (cls) cell.className = cls;
