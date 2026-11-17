@@ -425,7 +425,7 @@
     agentLabel: "Agent App - ",
     personFields: ["requester", "assignee"],
     statusField: "status",
-    statusTone: { open: "warn", in_progress: "dim", done: "ok", approved: "ok" },
+    statusTone: { open: "warn", in_progress: "dim", done: "ok" },
     priorityField: "priority",
     priorityColumn: "title",
   };
@@ -649,7 +649,7 @@
           const who = record[key].slice(DOMAIN.agentIdPrefix.length);
           const id = document.createElement("code");
           id.textContent = record[key];
-          value.textContent = DOMAIN.agentLabel + who.charAt(0).toUpperCase() + who.slice(1);
+          value.textContent = DOMAIN.agentLabel + who;
           value.appendChild(id);
         }
         return line;
