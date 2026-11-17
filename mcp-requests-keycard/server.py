@@ -3,8 +3,9 @@
 Protected with Keycard. Every call arrives with a delegated token naming the
 real user, so this server can enforce what the API key never could, and tell
 the dashboard who filed each request: you create requests as yourself, the
-requester and assignee may move a request's status, and only the requester may
-change its priority, delete it, or reassign it.
+requester and assignee may move a request's status, only the requester may
+change its priority, delete it, or reassign it, and anyone may pick up an
+unassigned request.
 """
 
 import os
@@ -231,14 +232,18 @@ def reassign_request(
     request_id: str, assignee: str, *, access: AccessContext, ctx: Context
 ) -> dict:
     """Reassign a request to someone else. Assignee is an email address.
-    Only the requester may reassign it."""
+    Only the requester may reassign it, but anyone may pick up an unassigned
+    request by assigning it to themselves."""
     try:
         credential = _credential(access)
         row = storage.get_request(request_id, credential)
         caller = _caller(access, ctx)
-        if row.get("requester") != caller:
+        # Picking up: the API assigns only if the request is still unassigned.
+        pickup = not row.get("assignee") and assignee.strip().lower() == caller
+        if row.get("requester") != caller and not pickup:
             return _forbidden(request_id, row.get("requester", ""), caller, "reassign")
-        return storage.update_request(request_id, {"assignee": assignee}, credential)
+        fields = {"assignee": assignee, "caller": caller, "if_unassigned": pickup}
+        return storage.update_request(request_id, fields, credential)
     except DashboardError as exc:
         return {"error": "dashboard_error", "detail": str(exc)}
 

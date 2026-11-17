@@ -40,12 +40,13 @@ def make_request_tools(settings: Settings) -> list[BaseTool]:
         title: str, description: str = "", priority: str = "normal", assignee: str = ""
     ) -> str:
         """File a new request on the dashboard. Title is a short label, a few
-        words naming what is asked for; description says what is needed and
-        why, in the user's own terms. Priority is low, normal, or high.
+        words naming the task; description says what is wrong or what is
+        needed, in the user's own terms. Priority is low, normal, or high.
         assignee is an email address, or empty to leave it unassigned; if the
         user gives a name instead, resolve it to an email and confirm before
         filing, and never file an invented address. If the user hasn't said
-        why, ask before filing, and never invent a reason."""
+        what is wrong or what they need, ask before filing, and never invent
+        details."""
         return _call(
             "create_request",
             {"title": title, "description": description, "priority": priority, "assignee": assignee},
@@ -70,7 +71,8 @@ def make_request_tools(settings: Settings) -> list[BaseTool]:
     def reassign_request(request_id: str, assignee: str) -> str:
         """Reassign a request to someone else. assignee is an email address.
         If the user gives a name, resolve it to an email and confirm before
-        reassigning, and never invent one."""
+        reassigning, and never invent one. To pick up an unassigned request,
+        assign it to the signed-in user's own email."""
         return _call("reassign_request", {"request_id": request_id, "assignee": assignee})
 
     def _call(tool_name: str, args: dict) -> str:
