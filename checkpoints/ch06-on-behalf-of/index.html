@@ -612,7 +612,9 @@
           cell.textContent = personName(raw);
           cell.className = "person";
           if (cell.textContent !== raw) cell.title = raw;
-        } else if (key === DOMAIN.copyField) {
+        } else if (key === DOMAIN.copyField && /^[A-Za-z0-9._:-]{1,64}$/.test(record[key])) {
+          // Only a value shaped like an ID gets a copy button; anything
+          // else stays plain text and never reaches the clipboard.
           cell.appendChild(copyButton(record[key]));
           if (cls) cell.className = cls;
         } else {
