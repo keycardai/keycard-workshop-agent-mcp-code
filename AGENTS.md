@@ -7,7 +7,8 @@ agent and an MCP server into Keycard, one chapter at a time.
 `.claude/skills/keycard-workshop/SKILL.md` (also at `.agents/skills/keycard-workshop/SKILL.md`).
 It defines how to orient, which chapter to build, and the guardrails. The ones that matter
 most: build one chapter at a time, in order, never run ahead, and treat the docs as the
-source of truth.
+source of truth. After you apply a chapter, explain what you changed, why, and how it
+works, briefly and clearly: the attendee may not have read the chapter.
 
 Key layout:
 

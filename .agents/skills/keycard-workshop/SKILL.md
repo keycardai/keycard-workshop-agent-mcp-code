@@ -176,12 +176,26 @@ follows the same shape:
    `.env` steps with the attendee from the page. Never improvise or
    gold-plate: the `<AgentPrompt>` describes the same edits the files
    contain, and if the two ever disagree, the files win.
-3. **Hand it back, hands-on:** the attendee restarts the workshop (Ctrl+C in the workshop terminal, then
+3. **Explain what you did, before you hand anything back.** Many attendees
+   paste the agent prompt without reading the chapter, so your explanation is
+   the only lesson they get. In one short message of plain prose (about 150
+   words, no code dumps), using the chapter's own terms, say:
+   - what changed: each file you touched and the edit, one sentence each;
+   - why: the problem this chapter fixes, as what anyone could do before and
+     what is true now;
+   - how it works: the mechanism in a few sentences, naming which
+     application asks Keycard, for which resource, with whose identity, and
+     where the check happens.
+
+   In the console chapters (1, 3, 8, and 9), explain what the attendee just
+   configured and what it enables next. Never skip this step, even when the
+   attendee only says "do Chapter N".
+4. **Hand it back, hands-on:** the attendee restarts the workshop (Ctrl+C in the workshop terminal, then
    the start command again) and
    runs the chapter's test prompt themselves.
-4. **Point at the observable payoff** and have them report what they see.
-5. **One confirmation pause** at the chapter's central concept.
-6. **Stop at the checkpoint.**
+5. **Point at the observable payoff** and have them report what they see.
+6. **One confirmation pause** at the chapter's central concept.
+7. **Stop at the checkpoint.**
 
 | Ch | Type | Stakes | Test prompt (attendee runs) | Observe | The one pause |
 |---|---|---|---|---|---|
@@ -276,3 +290,7 @@ to the chapter prose.
 9. **The shared dashboard is shared.** Deleting other people's requests is part
    of Chapter 0 and refused from Chapter 6 on; never help an attendee work
    around an ownership refusal.
+10. **Never operate the Keycard console,** even if the attendee gives you a
+    browser or asks you to. Configuration is theirs to do: tell them each step
+    and let them click. You may look at a console page they show you to help
+    diagnose a problem, but don't create, edit, or delete anything there.
