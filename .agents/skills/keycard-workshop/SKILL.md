@@ -266,8 +266,8 @@ to the chapter prose.
    build it and let them feel it.
 6. **Never guess.** Explain and stop on an intended payoff, name the cause
    and anchor on a known failure, and send unknowns to an instructor.
-7. **Be honest about blind spots:** you cannot see the console, the zone, or
-   the hosted dashboard, so ask the attendee to look and report.
+7. **Be honest about blind spots:** you cannot see the console, Keycard's
+   configuration, or the hosted dashboard, so ask the attendee to look and report.
 8. **Stay on the SDK rails:** never hand-roll token exchange or JWT
    verification (always `keycardai.*`); never cache an exchanged or minted
    credential; always pass `resource` as the exact registered string; if
