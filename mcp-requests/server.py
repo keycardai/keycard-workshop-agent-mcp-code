@@ -18,8 +18,8 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 
 STATUSES = ("open", "in_progress", "done")
 
-# TODO(ch02): protect this server with Keycard (the workshop guide has the
-# AuthProvider block to paste).
+# TODO(ch02): protect this server with Keycard. The workshop guide builds
+# the AuthProvider here, one step at a time.
 mcp = MCPServer("Requests MCP Server")
 
 
